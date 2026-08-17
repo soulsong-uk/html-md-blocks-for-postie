@@ -60,7 +60,7 @@ class HtmlToBlocks
         }
 
         $blocks = [];
-        foreach ($root->children() as $node) {
+        foreach ($this->childNodes($root) as $node) {
             $blocks = array_merge($blocks, $this->nodeToBlocks($node, $registry));
         }
 
@@ -95,8 +95,12 @@ class HtmlToBlocks
 
         $tag = strtolower((string) $node->tag);
 
-        if (in_array($tag, ['br', 'hr'], true)) {
+        if ($tag === 'br') {
             return [];
+        }
+
+        if ($tag === 'hr') {
+            return [$this->separatorBlock()];
         }
 
         if (preg_match('/^h([1-6])$/', $tag, $m)) {
@@ -105,8 +109,13 @@ class HtmlToBlocks
         }
 
         if ($tag === 'p') {
-            $inner = trim((string) $node->innertext);
-            return $inner === '' ? [] : [$this->paragraphBlock($inner)];
+            // Don't just wrap the whole paragraph's innertext verbatim - an
+            // <img> inline in running text (e.g. Markdown "some text
+            // ![alt](url) more text" with no blank line around the image,
+            // so Parsedown keeps it as inline content of the same <p>) would
+            // otherwise get baked into the paragraph block's HTML instead of
+            // becoming its own core/image block. Split around any images.
+            return $this->splitParagraphContent($node, $registry);
         }
 
         if ($tag === 'img') {
@@ -116,7 +125,7 @@ class HtmlToBlocks
 
         if ($tag === 'a') {
             $imgChildren = array_values(array_filter(
-                $node->children(),
+                $this->childNodes($node),
                 static function ($child) {
                     return isset($child->nodetype) && $child->nodetype === HDOM_TYPE_ELEMENT
                         && strtolower((string) $child->tag) === 'img';
@@ -141,7 +150,7 @@ class HtmlToBlocks
         // core/image block.
         if ($tag === 'div' && $this->isTransparentContainer($node)) {
             $blocks = [];
-            foreach ($node->children() as $child) {
+            foreach ($this->childNodes($node) as $child) {
                 $blocks = array_merge($blocks, $this->nodeToBlocks($child, $registry));
             }
             return $blocks;
@@ -154,15 +163,112 @@ class HtmlToBlocks
         return $outer === '' ? [] : [$this->htmlFallbackBlock($outer)];
     }
 
+    /**
+     * Walks a <p>'s direct children and splits out any embedded image (bare
+     * <img>, or an <a> wrapping nothing but a single <img>) into its own
+     * core/image block, flushing accumulated inline text/formatting around
+     * it into core/paragraph blocks. A paragraph containing only an image
+     * (no surrounding text) yields just the image block, no empty paragraph.
+     *
+     * @return array<int,array<string,mixed>>
+     */
+    private function splitParagraphContent($node, AttachmentRegistry $registry): array
+    {
+        $blocks = [];
+        $buffer = '';
+
+        foreach ($this->childNodes($node) as $child) {
+            if (!isset($child->nodetype) || $child->nodetype !== HDOM_TYPE_ELEMENT) {
+                $buffer .= (string) $child->outertext;
+                continue;
+            }
+
+            $childTag   = strtolower((string) $child->tag);
+            $imgNode    = null;
+            $anchorNode = null;
+
+            if ($childTag === 'img') {
+                $imgNode = $child;
+            } elseif ($childTag === 'a') {
+                $imgChildren = array_values(array_filter(
+                    $this->childNodes($child),
+                    static function ($c) {
+                        return isset($c->nodetype) && $c->nodetype === HDOM_TYPE_ELEMENT
+                            && strtolower((string) $c->tag) === 'img';
+                    }
+                ));
+                $textOnly = trim(wp_strip_all_tags((string) $child->innertext));
+                if (count($imgChildren) === 1 && $textOnly === '') {
+                    $imgNode    = $imgChildren[0];
+                    $anchorNode = $child;
+                }
+            }
+
+            if ($imgNode === null) {
+                $buffer .= (string) $child->outertext;
+                continue;
+            }
+
+            $pending = trim($buffer);
+            if ($pending !== '') {
+                $blocks[] = $this->paragraphBlock($pending);
+            }
+            $buffer = '';
+
+            $imageBlock = $this->imageBlock($imgNode, $anchorNode, $registry);
+            if ($imageBlock) {
+                $blocks[] = $imageBlock;
+            }
+        }
+
+        $pending = trim($buffer);
+        if ($pending !== '') {
+            $blocks[] = $this->paragraphBlock($pending);
+        }
+
+        return $blocks;
+    }
+
+    /**
+     * @return array<string,mixed>
+     */
+    private function separatorBlock(): array
+    {
+        $html = '<hr class="wp-block-separator"/>';
+        return [
+            'blockName'    => 'core/separator',
+            'attrs'        => [],
+            'innerBlocks'  => [],
+            'innerHTML'    => $html,
+            'innerContent' => [$html],
+        ];
+    }
+
     private function isTransparentContainer($node): bool
     {
-        foreach ($node->children() as $child) {
+        foreach ($this->childNodes($node) as $child) {
             if (isset($child->nodetype) && $child->nodetype === HDOM_TYPE_TEXT
                 && trim((string) $child->outertext) !== '') {
                 return false;
             }
         }
         return true;
+    }
+
+    /**
+     * simple_html_dom's own children() method returns only ELEMENT nodes -
+     * it silently excludes plain text nodes entirely. That's harmless for
+     * walking purely-structural markup, but for anything that mixes real
+     * text with elements (a <p> with inline text around an <img>, a
+     * text-only <p>) it drops the text completely. The public "nodes"
+     * property holds every direct child node (text included) in source
+     * order, which is what every walk in this class actually needs.
+     *
+     * @return array<int,mixed>
+     */
+    private function childNodes($node): array
+    {
+        return is_array($node->nodes ?? null) ? $node->nodes : [];
     }
 
     /**

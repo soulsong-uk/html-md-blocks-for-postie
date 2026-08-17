@@ -9,9 +9,9 @@ defined('ABSPATH') || exit;
  * (postie-message.php, PostieMessage class):
  *
  *  - postie_post_pre    (before Postie's own content filters run) - only
- *    used here to record per-email state (was this a plain-text/Markdown
- *    body?) and reset the attachment registry; content itself is left
- *    untouched here, see the class docblock on MarkdownConverter for why.
+ *    used here to reset the attachment registry for the new email; content
+ *    itself is left untouched here (see MarkdownConverter's docblock for
+ *    why the actual conversion waits until postie_post_before instead).
  *  - postie_file_added   (fires once per emailed attachment, after it
  *    becomes a real WP attachment) - records the URL -> attachment ID
  *    mapping used later for core/image blocks.
@@ -29,7 +29,6 @@ class Hooks
     private AttachmentRegistry $registry;
     private MarkdownConverter $markdown;
     private HtmlToBlocks $htmlToBlocks;
-    private bool $isPlainTextSource = false;
 
     public function __construct()
     {
@@ -51,19 +50,9 @@ class Hooks
      */
     public function onPostPre($email)
     {
-        if (!is_array($email)) {
-            return $email;
+        if (is_array($email)) {
+            $this->registry->reset();
         }
-
-        $this->registry->reset();
-
-        // Mirrors the auto-swap Postie itself does before this point (see
-        // postie-message.php ~line 38-44): whichever body is actually
-        // non-empty is the one extract_content() will use, regardless of
-        // the site's configured "prefer_text_type" default.
-        $html = trim((string) ($email['html'] ?? ''));
-        $text = trim((string) ($email['text'] ?? ''));
-        $this->isPlainTextSource = ($html === '' && $text !== '');
 
         return $email;
     }
@@ -92,7 +81,13 @@ class Hooks
         try {
             $content = (string) $details['post_content'];
 
-            if ($this->isPlainTextSource && Settings::isMarkdownEnabled()) {
+            // Detected from the actual content, not from which MIME part
+            // (html vs text) the email happened to populate - see
+            // MarkdownConverter::looksLikeMarkdown()'s docblock for why the
+            // MIME-based signal is unreliable (many mail clients wrap
+            // literally-typed Markdown in an HTML <div>/<br> structure).
+            if (Settings::isMarkdownEnabled()
+                && MarkdownConverter::looksLikeMarkdown(wp_strip_all_tags($content))) {
                 $content = $this->markdown->convert($content);
             }
 
