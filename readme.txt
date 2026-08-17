@@ -27,6 +27,16 @@ By default, Postie saves emailed content as a flat HTML/text blob, so a post cre
 2. Install and activate this plugin.
 3. Optionally visit Postie's settings > Markdown Blocks to toggle Markdown parsing for plain-text emails (on by default). HTML-email normalization is always on.
 
+== Frequently Asked Questions ==
+
+= My email had a "---" line and everything after it disappeared =
+
+This is Postie's own behavior, not this plugin's. Postie's default settings treat a line containing only `---` (or `--`) as the start of an email signature and strip everything from that point onward, before this plugin ever sees the content (Postie's `sig_pattern_list` setting, under Postie's own settings screen, includes `---` by default). Markdown commonly uses `---` on its own line as a thematic break (horizontal rule), so a Markdown email using that syntax will have everything after it silently removed by Postie itself.
+
+Workarounds:
+* Use `***` or `___` instead of `---` for a horizontal rule in emailed Markdown - neither is in Postie's default signature-pattern list.
+* Or, if you don't rely on Postie's automatic signature stripping, remove `---` (and `--`) from Postie's "Signature Patterns" setting.
+
 == Changelog ==
 
 = 0.1.1 =

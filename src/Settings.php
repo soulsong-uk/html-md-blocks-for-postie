@@ -103,6 +103,18 @@ class Settings
                             <?php esc_html_e('When off, plain-text emails still convert to Gutenberg paragraph blocks, but Markdown syntax such as "# Heading" is left as literal text instead of becoming a heading block. HTML emails are always normalized into blocks regardless of this setting.', 'postie-md-plugin'); ?>
                         </p>
                     </div>
+                    <div class="postie-md-subsection">
+                        <p class="postie-md-field-heading"><?php esc_html_e('Known Conflict: "---" and Signature Stripping', 'postie-md-plugin'); ?></p>
+                        <p class="description">
+                            <?php
+                            printf(
+                                /* translators: %s: link to Postie's own settings page (its "Message" tab holds the "Signature Patterns" field). */
+                                esc_html__('Postie\'s own default settings treat a line containing only "---" as the start of an email signature and remove everything after it, before this plugin ever sees the content - Postie\'s "Signature Patterns" list, under %s (Message tab), includes "---" by default. Since Markdown commonly uses "---" on its own line as a horizontal rule, a Markdown email using that syntax will lose everything past it. Use "***" or "___" for a horizontal rule instead, or remove "---" from Postie\'s Signature Patterns list if you don\'t rely on automatic signature stripping.', 'postie-md-plugin'),
+                                '<a href="' . esc_url(admin_url('admin.php?page=postie-settings')) . '">' . esc_html__("Postie's settings", 'postie-md-plugin') . '</a>'
+                            );
+                            ?>
+                        </p>
+                    </div>
                 </div>
                 <?php submit_button(); ?>
             </form>
