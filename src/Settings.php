@@ -131,12 +131,18 @@ class Settings
                         </p>
                     </div>
                     <div class="postie-md-subsection">
+                        <p class="postie-md-field-heading"><?php esc_html_e('Recommended: Wrap Markdown in <md>...</md>', 'postie-md-plugin'); ?></p>
+                        <p class="description">
+                            <?php esc_html_e('Postie has several of its own content-processing features - collapsing single line breaks, stripping anything after a "---" line as a signature, pulling an inline "#subject#" out of the body - that all run before this plugin ever sees your email, and each can silently damage Markdown syntax that happens to resemble one of Postie\'s own conventions (see the two notes below for specifics). Wrapping the Markdown portion of an email in <md> and </md> tags shields it from all three at once, converting using your email\'s exact original line breaks. This is the single most reliable way to guarantee any Markdown email - especially one with a list, a "---" rule, or a heading as the very first line - converts correctly.', 'postie-md-plugin'); ?>
+                        </p>
+                    </div>
+                    <div class="postie-md-subsection">
                         <p class="postie-md-field-heading"><?php esc_html_e('Known Conflict: "---" and Signature Stripping', 'postie-md-plugin'); ?></p>
                         <p class="description">
                             <?php
                             printf(
                                 /* translators: %s: link to Postie's own settings page (its "Message" tab holds the "Signature Patterns" field). */
-                                esc_html__('Postie\'s own default settings treat a line containing only "---" as the start of an email signature and remove everything after it, before this plugin ever sees the content - Postie\'s "Signature Patterns" list, under %s (Message tab), includes "---" by default. Since Markdown commonly uses "---" on its own line as a horizontal rule, a Markdown email using that syntax will lose everything past it. Use "***" or "___" for a horizontal rule instead, or remove "---" from Postie\'s Signature Patterns list if you don\'t rely on automatic signature stripping.', 'postie-md-plugin'),
+                                esc_html__('Postie\'s own default settings treat a line containing only "---" as the start of an email signature and remove everything after it, before this plugin ever sees the content - Postie\'s "Signature Patterns" list, under %s (Message tab), includes "---" by default. Since Markdown commonly uses "---" on its own line as a horizontal rule, a Markdown email using that syntax will lose everything past it. Fixed by wrapping in <md>...</md> above. Alternatively, use "***" or "___" for a horizontal rule instead, or remove "---" from Postie\'s Signature Patterns list if you don\'t rely on automatic signature stripping.', 'postie-md-plugin'),
                                 '<a href="' . esc_url(admin_url('admin.php?page=postie-settings')) . '">' . esc_html__("Postie's settings", 'postie-md-plugin') . '</a>'
                             );
                             ?>
@@ -148,16 +154,10 @@ class Settings
                             <?php
                             printf(
                                 /* translators: %s: link to Postie's own settings page (its "Message" tab holds the "Allow Subject In Mail" field). */
-                                esc_html__('If Postie\'s "Allow Subject In Mail" setting is on (%s, Message tab) and the email body starts with "#", Postie treats everything up to the NEXT "#" anywhere in the body as the subject and strips it out of the content - intended for a deliberate "#subject#" marker on the first line, but a Markdown email starting with a "# Heading" (with a later "##"/"###" heading further down) gets its entire opening section pulled into the post title instead. Turn off "Allow Subject In Mail" if you don\'t use that feature, or avoid starting the email body with a "#" heading as the very first character.', 'postie-md-plugin'),
+                                esc_html__('If Postie\'s "Allow Subject In Mail" setting is on (%s, Message tab) and the email body starts with "#", Postie treats everything up to the NEXT "#" anywhere in the body as the subject and strips it out of the content - intended for a deliberate "#subject#" marker on the first line, but a Markdown email starting with a "# Heading" (with a later "##"/"###" heading further down) gets its entire opening section pulled into the post title instead. Fixed by wrapping in <md>...</md> above, with the <md> tag itself as the very first thing in the body. Alternatively, turn off "Allow Subject In Mail" if you don\'t use that feature, or avoid starting the email body with a "#" heading as the very first character.', 'postie-md-plugin'),
                                 '<a href="' . esc_url(admin_url('admin.php?page=postie-settings')) . '">' . esc_html__("Postie's settings", 'postie-md-plugin') . '</a>'
                             );
                             ?>
-                        </p>
-                    </div>
-                    <div class="postie-md-subsection">
-                        <p class="postie-md-field-heading"><?php esc_html_e('Recommended: Wrap Markdown in <md>...</md>', 'postie-md-plugin'); ?></p>
-                        <p class="description">
-                            <?php esc_html_e('Postie\'s own newline-collapsing preserves a blank-line paragraph break but reduces a single line break to just a space - the exact line-break style Markdown lists use between items. Wrapping the Markdown portion of an email in <md> and </md> tags shields it from that (and from the "---"/"#" conflicts above) entirely, using your email\'s exact original line breaks. Recommended for any email containing a list.', 'postie-md-plugin'); ?>
                         </p>
                     </div>
                 </div>

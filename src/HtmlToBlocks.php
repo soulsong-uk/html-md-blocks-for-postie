@@ -12,10 +12,12 @@ defined('ABSPATH') || exit;
  *
  * Maps: h1-h6 -> core/heading, p -> core/paragraph, img -> core/image
  * (attachment ID resolved where possible), ul/ol -> core/list with each li
- * as a core/list-item inner block (nested sub-lists supported). Anything
- * else (quotes, code, tables, leftover styled markup from HTML mail
- * clients) falls back to a core/html block so no content is ever silently
- * dropped.
+ * as a core/list-item inner block (nested sub-lists supported),
+ * blockquote -> core/quote (contents recursed as inner blocks, so a
+ * paragraph/image/list inside a quote convert the same as at the top
+ * level). Anything else (code, tables, leftover styled markup from HTML
+ * mail clients) falls back to a core/html block so no content is ever
+ * silently dropped.
  *
  * Uses Postie's own bundled simple_html_dom parser (via $g_postie->load_html())
  * rather than adding a second vendored dependency or requiring ext-dom -
@@ -149,6 +151,11 @@ class HtmlToBlocks
             return $block ? [$block] : [];
         }
 
+        if ($tag === 'blockquote') {
+            $block = $this->quoteBlock($node, $registry);
+            return $block ? [$block] : [];
+        }
+
         // Transparent containers - e.g. Postie's own <div class="postie-attachments">
         // wrapper around attachment templates - have no meaningful text of
         // their own, so recurse into their children instead of collapsing
@@ -168,6 +175,44 @@ class HtmlToBlocks
         // verbatim rather than drop.
         $outer = trim((string) $node->outertext);
         return $outer === '' ? [] : [$this->htmlFallbackBlock($outer)];
+    }
+
+    /**
+     * Maps a <blockquote> to core/quote, with its contents (typically one
+     * or more <p> paragraphs from Parsedown's Markdown "> quoted text"
+     * output) as inner blocks - reuses the normal nodeToBlocks() dispatch
+     * for each child, so a paragraph, an image, or even a nested list
+     * inside the quote all convert exactly as they would at the top level,
+     * matching current Gutenberg's actual core/quote structure (inner
+     * blocks, not raw paragraph markup baked into the blockquote itself).
+     *
+     * @return array<string,mixed>|null
+     */
+    private function quoteBlock($node, AttachmentRegistry $registry): ?array
+    {
+        $innerBlocks = [];
+        foreach ($this->childNodes($node) as $child) {
+            $innerBlocks = array_merge($innerBlocks, $this->nodeToBlocks($child, $registry));
+        }
+
+        if (empty($innerBlocks)) {
+            return null;
+        }
+
+        $openTag      = '<blockquote class="wp-block-quote">';
+        $innerContent = [$openTag];
+        foreach ($innerBlocks as $ignored) {
+            $innerContent[] = null;
+        }
+        $innerContent[] = '</blockquote>';
+
+        return [
+            'blockName'    => 'core/quote',
+            'attrs'        => [],
+            'innerBlocks'  => $innerBlocks,
+            'innerHTML'    => $openTag . '</blockquote>',
+            'innerContent' => $innerContent,
+        ];
     }
 
     /**
