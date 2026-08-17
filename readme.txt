@@ -4,7 +4,7 @@ Tags: postie, email, markdown, gutenberg, blocks
 Requires at least: 6.2
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 0.1.2
+Stable tag: 0.1.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -39,6 +39,10 @@ Workarounds:
 * Or, if you don't rely on Postie's automatic signature stripping, remove `---` (and `--`) from Postie's "Signature Patterns" setting.
 
 == Changelog ==
+
+= 0.1.3 =
+* Fix: Markdown list items with mail-client whitespace padding right after the marker were becoming indented code blocks instead of plain list text
+* Fix: literal backslashes in emailed content (e.g. Windows file paths) were being doubled when Postie saved the post - now preserved correctly
 
 = 0.1.2 =
 * Fix: Markdown was never parsed for real mail-client HTML - Thunderbird wraps each paragraph in its own <p>, which made every paragraph individually opaque to Parsedown's raw-HTML-passthrough rule
