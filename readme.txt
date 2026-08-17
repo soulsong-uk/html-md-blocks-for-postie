@@ -4,7 +4,7 @@ Tags: postie, email, markdown, gutenberg, blocks
 Requires at least: 6.2
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 0.1.4
+Stable tag: 0.1.5
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -62,6 +62,9 @@ The fix: wrap the Markdown portion of your email in `<md>` and `</md>` tags:
 Content inside `<md>...</md>` is shielded from Postie's own content processing entirely (newline-collapsing, signature stripping, subject extraction - all three) before this plugin runs, so it converts using your email's exact original line breaks. This is the single most reliable way to guarantee a list, or any other multi-line Markdown structure, converts correctly - recommended for any email with a list in it.
 
 == Changelog ==
+
+= 0.1.5 =
+* New: independent settings toggles for Markdown parsing and Gutenberg block conversion - block conversion can now be turned off entirely (previously always on)
 
 = 0.1.4 =
 * New: wrap Markdown content in <md>...</md> to shield it from Postie's own newline-collapsing and signature/subject-marker collisions - fixes lists and headings-followed-by-lists coming through merged or corrupted
