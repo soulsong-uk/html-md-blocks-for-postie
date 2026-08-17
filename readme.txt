@@ -4,7 +4,7 @@ Tags: postie, email, markdown, gutenberg, blocks
 Requires at least: 6.2
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 0.1.0
+Stable tag: 0.1.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -28,6 +28,12 @@ By default, Postie saves emailed content as a flat HTML/text blob, so a post cre
 3. Optionally visit Postie's settings > Markdown Blocks to toggle Markdown parsing for plain-text emails (on by default). HTML-email normalization is always on.
 
 == Changelog ==
+
+= 0.1.1 =
+* Fix: inline images within paragraph text now become their own core/image block instead of being embedded in the paragraph's HTML
+* Fix: plain-text paragraphs and text preceding an inline image were silently dropped due to a simple_html_dom quirk (children() excludes text nodes)
+* Fix: Markdown detection now based on content patterns rather than which MIME part the email populated, so HTML-wrapped plain-text emails (Gmail/Outlook) no longer collapse to one block
+* Fix: horizontal rules (---) now become a core/separator block instead of being silently dropped
 
 = 0.1.0 =
 * Initial release: Markdown/HTML -> Gutenberg blocks conversion for paragraphs, headings, and images.

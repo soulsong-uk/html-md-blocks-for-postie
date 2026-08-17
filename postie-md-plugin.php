@@ -3,7 +3,7 @@
  * Plugin Name: Postie Markdown Blocks
  * Plugin URI:  https://github.com/soulsong/postie-md-plugin
  * Description: Addon for Postie that converts emailed Markdown and HTML content into native Gutenberg blocks (paragraphs, headings, images) instead of Postie's default raw HTML output.
- * Version:     0.1.0
+ * Version:     0.1.1
  * Requires at least: 6.2
  * Requires PHP: 7.4
  * Requires Plugins: postie
@@ -14,7 +14,7 @@
 
 defined('ABSPATH') || exit;
 
-define('POSTIE_MD_VERSION', '0.1.0');
+define('POSTIE_MD_VERSION', '0.1.1');
 define('POSTIE_MD_PLUGIN_FILE', __FILE__);
 define('POSTIE_MD_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('POSTIE_MD_PLUGIN_URL', plugin_dir_url(__FILE__));
