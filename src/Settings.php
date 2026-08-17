@@ -115,6 +115,18 @@ class Settings
                             ?>
                         </p>
                     </div>
+                    <div class="postie-md-subsection">
+                        <p class="postie-md-field-heading"><?php esc_html_e('Known Conflict: "#" and Allow Subject In Mail', 'postie-md-plugin'); ?></p>
+                        <p class="description">
+                            <?php
+                            printf(
+                                /* translators: %s: link to Postie's own settings page (its "Message" tab holds the "Allow Subject In Mail" field). */
+                                esc_html__('If Postie\'s "Allow Subject In Mail" setting is on (%s, Message tab) and the email body starts with "#", Postie treats everything up to the NEXT "#" anywhere in the body as the subject and strips it out of the content - intended for a deliberate "#subject#" marker on the first line, but a Markdown email starting with a "# Heading" (with a later "##"/"###" heading further down) gets its entire opening section pulled into the post title instead. Turn off "Allow Subject In Mail" if you don\'t use that feature, or avoid starting the email body with a "#" heading as the very first character.', 'postie-md-plugin'),
+                                '<a href="' . esc_url(admin_url('admin.php?page=postie-settings')) . '">' . esc_html__("Postie's settings", 'postie-md-plugin') . '</a>'
+                            );
+                            ?>
+                        </p>
+                    </div>
                 </div>
                 <?php submit_button(); ?>
             </form>

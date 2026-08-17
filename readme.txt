@@ -38,6 +38,14 @@ Workarounds:
 * Use `***` or `___` instead of `---` for a horizontal rule in emailed Markdown - neither is in Postie's default signature-pattern list.
 * Or, if you don't rely on Postie's automatic signature stripping, remove `---` (and `--`) from Postie's "Signature Patterns" setting.
 
+= My post title/slug ended up containing half my email body =
+
+Also Postie's own behavior, not this plugin's - and also a Markdown collision. If Postie's "Allow Subject In Mail" setting (Message tab) is on and the email body starts with `#`, Postie treats everything up to the *next* `#` anywhere in the body as the subject and strips it out - intended for a deliberate `#subject#` marker on the first line, but a Markdown email starting with a `# Heading` (and containing a later `##`/`###` heading further down) gets its entire opening section swallowed into the post title instead.
+
+Workarounds:
+* Turn off "Allow Subject In Mail" under Postie's Message settings tab if you don't use that feature - the plugin then uses your email's real Subject header as-is.
+* Or avoid starting the email body with a `#` heading as literally the first character.
+
 == Changelog ==
 
 = 0.1.3 =
