@@ -31,8 +31,33 @@ class MarkdownConverter
 
         $config = function_exists('postie_config_read') ? postie_config_read() : null;
         $source = $this->recoverParagraphBreaks($content, $config);
+        $source = $this->collapseRepeatedSpaces($source);
 
         return $this->parsedownToHtml($source);
+    }
+
+    /**
+     * Collapses runs of 2+ literal space/tab characters down to one -
+     * confirmed source: mail clients (Thunderbird observed directly) pad
+     * their line-wrapped text with runs of multiple spaces at wrap points
+     * (e.g. "Maintenance          Notice", "successfully        completed"),
+     * which is cosmetically odd in ordinary paragraph text but structurally
+     * breaks list parsing specifically: CommonMark/Parsedown treats content
+     * indented 4+ spaces after a list marker as an INDENTED CODE BLOCK
+     * inside that list item rather than plain text, so "*          Updated
+     * ..." (marker plus a wide run of padding spaces) turns "Updated ..."
+     * into a <pre><code> block nested in the <li> instead of ordinary list
+     * item text. Only touches space/tab runs, never the "\n\n"
+     * paragraph-break markers recoverParagraphBreaks() just built, so this
+     * can't undo that work. Trade-off: a genuine 4-space-indented code
+     * block (no fenced ``` delimiters) would also be collapsed to a normal
+     * paragraph - accepted for v1, since fenced code blocks are unaffected
+     * and indented-only code blocks are rare in emailed Markdown compared
+     * to this now-confirmed, structurally-breaking mail-client artifact.
+     */
+    private function collapseRepeatedSpaces(string $content): string
+    {
+        return (string) preg_replace('/[ \t]{2,}/', ' ', $content);
     }
 
     /**

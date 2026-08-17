@@ -94,6 +94,18 @@ class Hooks
             $converted = $this->htmlToBlocks->convert($content, $this->registry);
 
             if (trim($converted) !== '') {
+                // Postie's own save_post() (postie-message.php) unconditionally
+                // runs str_replace('\\', '\\\\', $details['post_content']) AFTER
+                // this filter returns, to protect single backslashes from being
+                // eaten elsewhere in its own pipeline - but it doubles every
+                // backslash indiscriminately, including ordinary literal
+                // backslashes in real content (e.g. a Windows file path like
+                // "D:\Dev\projects\x" typed in the email), which would render
+                // doubled ("D:\\Dev\\projects\\x") in the published post.
+                // Converting to the HTML entity here leaves nothing for that
+                // later str_replace to find - it decodes back to a normal
+                // single backslash when rendered, unaffected by the doubling.
+                $converted = str_replace('\\', '&#92;', $converted);
                 $details['post_content'] = $converted;
             }
         } catch (\Throwable $e) {
