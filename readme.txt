@@ -16,10 +16,11 @@ This is an addon for the Postie plugin (email-to-post). It does nothing on its o
 
 By default, Postie saves emailed content as a flat HTML/text blob, so a post created from an email opens in the block editor as one big Classic/HTML block rather than proper paragraph/heading/image blocks. Postie Markdown Blocks hooks Postie's own `postie_post_pre` and `postie_post_before` filters (and `postie_file_added`) to convert that content into real Gutenberg blocks before the post is saved:
 
-* Plain-text emails written with Markdown syntax (`#`/`##` headings, blank-line paragraphs, `**bold**`, `[links](url)`) are parsed into native blocks.
+* Plain-text emails written with Markdown syntax (`#`/`##` headings, blank-line paragraphs, `**bold**`, `[links](url)`, `*`/`-` lists) are parsed into native blocks.
 * Rich HTML emails (Outlook/Gmail-style formatted mail) are normalized into equivalent blocks.
 * Emailed photo attachments become `core/image` blocks referencing the real WordPress attachment Postie already created, not bare `<img>` tags.
-* Anything not yet natively mapped (lists, quotes, code, tables - deferred past v1) falls back to a `core/html` block, so content is never silently dropped.
+* Bullet and numbered lists become real `core/list` blocks (with each item as its own `core/list-item`, including nested sub-lists), not plain text.
+* Anything not yet natively mapped (quotes, code, tables - deferred past v1) falls back to a `core/html` block, so content is never silently dropped.
 
 == Installation ==
 

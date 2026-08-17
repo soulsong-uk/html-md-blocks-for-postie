@@ -10,10 +10,12 @@ defined('ABSPATH') || exit;
  * and emits real Gutenberg block markup via WordPress core's own
  * serialize_blocks(), rather than hand-written "<!-- wp:x -->" strings.
  *
- * v1 maps: h1-h6 -> core/heading, p -> core/paragraph, img -> core/image
- * (attachment ID resolved where possible). Anything else (lists, quotes,
- * code, tables, leftover styled markup from HTML mail clients) falls back
- * to a core/html block so no content is ever silently dropped.
+ * Maps: h1-h6 -> core/heading, p -> core/paragraph, img -> core/image
+ * (attachment ID resolved where possible), ul/ol -> core/list with each li
+ * as a core/list-item inner block (nested sub-lists supported). Anything
+ * else (quotes, code, tables, leftover styled markup from HTML mail
+ * clients) falls back to a core/html block so no content is ever silently
+ * dropped.
  *
  * Uses Postie's own bundled simple_html_dom parser (via $g_postie->load_html())
  * rather than adding a second vendored dependency or requiring ext-dom -
@@ -142,6 +144,11 @@ class HtmlToBlocks
             return $outer === '' ? [] : [$this->paragraphBlock($outer)];
         }
 
+        if ($tag === 'ul' || $tag === 'ol') {
+            $block = $this->listBlock($node, $tag === 'ol');
+            return $block ? [$block] : [];
+        }
+
         // Transparent containers - e.g. Postie's own <div class="postie-attachments">
         // wrapper around attachment templates - have no meaningful text of
         // their own, so recurse into their children instead of collapsing
@@ -156,11 +163,113 @@ class HtmlToBlocks
             return $blocks;
         }
 
-        // Deferred v1 block types (lists, quotes, code, tables) and anything
-        // else unrecognized (styled markup from HTML mail clients) - preserve
+        // Deferred v1 block types (quotes, code, tables) and anything else
+        // unrecognized (styled markup from HTML mail clients) - preserve
         // verbatim rather than drop.
         $outer = trim((string) $node->outertext);
         return $outer === '' ? [] : [$this->htmlFallbackBlock($outer)];
+    }
+
+    /**
+     * Maps a <ul>/<ol> to core/list, with each <li> as a core/list-item
+     * inner block (matching current Gutenberg's actual block structure -
+     * list items are their own blocks, not just markup inside core/list).
+     * A nested <ul>/<ol> inside an <li> becomes a nested core/list inner
+     * block of that list-item, recursively.
+     *
+     * @return array<string,mixed>|null
+     */
+    private function listBlock($node, bool $ordered): ?array
+    {
+        $items = [];
+        foreach ($this->childNodes($node) as $child) {
+            if (!isset($child->nodetype) || $child->nodetype !== HDOM_TYPE_ELEMENT
+                || strtolower((string) $child->tag) !== 'li') {
+                continue;
+            }
+            $item = $this->listItemBlock($child);
+            if ($item !== null) {
+                $items[] = $item;
+            }
+        }
+
+        if (empty($items)) {
+            return null;
+        }
+
+        $tagName = $ordered ? 'ol' : 'ul';
+        $attrs   = $ordered ? ['ordered' => true] : [];
+
+        // Preserve a non-default start number Parsedown emits for e.g. a
+        // Markdown list that begins "3. item".
+        $start = (int) ($node->attr['start'] ?? 0);
+        if ($ordered && $start > 1) {
+            $attrs['start'] = $start;
+        }
+
+        $openTag = '<' . $tagName . ' class="wp-block-list"'
+            . (isset($attrs['start']) ? ' start="' . $attrs['start'] . '"' : '')
+            . '>';
+
+        $innerContent = [$openTag];
+        foreach ($items as $item) {
+            $innerContent[] = null;
+        }
+        $innerContent[] = '</' . $tagName . '>';
+
+        return [
+            'blockName'    => 'core/list',
+            'attrs'        => $attrs,
+            'innerBlocks'  => $items,
+            'innerHTML'    => $openTag . '</' . $tagName . '>',
+            'innerContent' => $innerContent,
+        ];
+    }
+
+    /**
+     * @return array<string,mixed>|null
+     */
+    private function listItemBlock($node): ?array
+    {
+        $nestedListBlock = null;
+        $textParts        = [];
+
+        foreach ($this->childNodes($node) as $child) {
+            if (isset($child->nodetype) && $child->nodetype === HDOM_TYPE_ELEMENT) {
+                $childTag = strtolower((string) $child->tag);
+                if ($childTag === 'ul' || $childTag === 'ol') {
+                    $nestedListBlock = $this->listBlock($child, $childTag === 'ol');
+                    continue;
+                }
+                if ($childTag === 'p') {
+                    // Loose-list rendering: Parsedown wraps an <li>'s content
+                    // in <p> when the source Markdown list had blank lines
+                    // between items. Gutenberg's own list-item stores rich
+                    // text directly inside <li>, not wrapped in <p> - unwrap.
+                    $textParts[] = (string) $child->innertext;
+                    continue;
+                }
+            }
+            $textParts[] = (string) $child->outertext;
+        }
+
+        $text = trim(implode('', $textParts));
+        if ($text === '' && $nestedListBlock === null) {
+            return null;
+        }
+
+        $innerBlocks  = $nestedListBlock !== null ? [$nestedListBlock] : [];
+        $innerContent = $nestedListBlock !== null
+            ? ['<li>' . $text, null, '</li>']
+            : ['<li>' . $text . '</li>'];
+
+        return [
+            'blockName'    => 'core/list-item',
+            'attrs'        => [],
+            'innerBlocks'  => $innerBlocks,
+            'innerHTML'    => '<li>' . $text . '</li>',
+            'innerContent' => $innerContent,
+        ];
     }
 
     /**
