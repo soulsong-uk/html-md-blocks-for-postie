@@ -26,6 +26,7 @@ class MarkdownConverter
      */
     public function convert(string $content): string
     {
+        $content = $this->unwrapFreetextLinks($content);
         $content = $this->stripWrapperTags($content);
 
         $config = function_exists('postie_config_read') ? postie_config_read() : null;
@@ -35,23 +36,67 @@ class MarkdownConverter
     }
 
     /**
-     * Strips generic non-semantic wrapper tags (div, span) entirely -
-     * opening and closing, attributes and all - leaving their inner content
-     * in place. Only reached once Hooks::onPostBefore's looksLikeMarkdown()
-     * check has already decided this content is Markdown-flavored text, not
-     * meaningful HTML, so a div/span here carries no structure worth
-     * preserving - it is reliably just a mail client's own rendering
-     * artifact (e.g. Gmail/Outlook wrapping a plain-text-composed message in
-     * a single <div dir="ltr">...</div> for its HTML alternative part).
+     * Unwraps "freetext" auto-linked bare URLs - confirmed source: mail
+     * clients (Thunderbird's moz-txt-link-freetext class is the specific
+     * one observed) automatically turn a bare URL the sender typed into
+     * <a href="URL">URL</a> when generating the HTML alternative part of a
+     * plain-text compose, matched here generically by link text equalling
+     * the href rather than by that one class name. Must run before Parsedown
+     * sees the content: a URL the sender wrote inside genuine Markdown
+     * syntax, e.g. "![alt](URL)", would otherwise arrive as
+     * "![alt](<a href="URL">URL</a>)" - a literal anchor tag nested inside
+     * the parens instead of a plain URL - which Parsedown does not
+     * recognize as valid image/link syntax, silently leaving it as literal
+     * text instead of a real image.
+     */
+    private function unwrapFreetextLinks(string $content): string
+    {
+        return (string) preg_replace_callback(
+            '/<a\b[^>]*\bhref=(["\'])(.*?)\1[^>]*>(.*?)<\/a>/i',
+            static function ($m) {
+                $href = trim($m[2]);
+                $text = trim(wp_strip_all_tags($m[3]));
+                return $href === $text ? $href : $m[0];
+            },
+            $content
+        );
+    }
+
+    /**
+     * Strips generic non-semantic wrapper tags entirely - opening and
+     * closing, attributes and all - leaving their inner content in place.
+     * Only reached once Hooks::onPostBefore's looksLikeMarkdown() check has
+     * already decided this content is Markdown-flavored text, not
+     * meaningful HTML, so these tags carry no structure worth preserving as
+     * HTML - they are reliably just a mail client's own rendering artifact.
      *
      * This matters because Parsedown (like CommonMark generally) treats any
      * block starting with a literal HTML tag as a raw HTML passthrough block
      * and never parses Markdown syntax inside it - so without this, content
-     * arriving as "<div># Heading...</div>" would never get its heading (or
-     * anything else inside the div) recognized at all.
+     * arriving wrapped in any of these tags would never get its Markdown
+     * syntax recognized at all.
+     *
+     * Two different mail-client shapes are handled differently:
+     *  - div/span: reliably just a single outer wrapper (e.g. Gmail/Outlook
+     *    wrapping a whole plain-text-composed message in one
+     *    "<div dir="ltr">...</div>", with <br> tags - handled separately by
+     *    recoverParagraphBreaks() - marking the line breaks). Stripped to
+     *    nothing; no paragraph-boundary information would be lost.
+     *  - p: mail clients (confirmed: Thunderbird's auto-generated HTML
+     *    alternative for a plain-text compose) commonly wrap EACH paragraph
+     *    in its own real <p>...</p>, one per original blank-line-separated
+     *    paragraph. Simply deleting these tags (like div/span) would merge
+     *    every paragraph into one run-on line, since removing a tag doesn't
+     *    insert whitespace where it was - so <p>/</p> are replaced with a
+     *    blank-line marker instead, preserving the paragraph break they
+     *    represented. Two blank-line markers landing back to back (one
+     *    paragraph's trailing marker next to the next one's leading marker)
+     *    is harmless - Parsedown treats consecutive blank lines the same as
+     *    a single one.
      */
     private function stripWrapperTags(string $content): string
     {
+        $content = (string) preg_replace('/<\/?p\b[^>]*>/i', "\n\n", $content);
         return (string) preg_replace('/<\/?(?:div|span)\b[^>]*>/i', '', $content);
     }
 
