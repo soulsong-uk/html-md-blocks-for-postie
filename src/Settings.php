@@ -5,9 +5,10 @@ namespace PostieMd;
 defined('ABSPATH') || exit;
 
 /**
- * A single v1 toggle - everything else (which tags map to which blocks, the
- * core/html fallback) is hardcoded rather than configurable, to keep launch
- * scope tight.
+ * Two toggles - Markdown parsing and HTML-to-blocks normalization can each
+ * be switched off independently. Everything else (which tags map to which
+ * blocks, the core/html fallback) is hardcoded rather than configurable, to
+ * keep scope tight.
  */
 class Settings
 {
@@ -15,11 +16,28 @@ class Settings
 
     public static function isMarkdownEnabled(): bool
     {
+        return self::flag('markdown_enabled');
+    }
+
+    /**
+     * Master switch for HtmlToBlocks - the pass that turns final HTML
+     * (Markdown-converted or original) into real Gutenberg block markup.
+     * Off means Postie's content is left exactly as Postie itself produced
+     * it (or as Markdown-converted semantic HTML, if that ran) - no
+     * <!-- wp:x --> block comments get added at all.
+     */
+    public static function isHtmlEnabled(): bool
+    {
+        return self::flag('html_enabled');
+    }
+
+    private static function flag(string $key): bool
+    {
         $settings = get_option(self::OPTION, []);
-        if (!is_array($settings) || !array_key_exists('markdown_enabled', $settings)) {
+        if (!is_array($settings) || !array_key_exists($key, $settings)) {
             return true; // default on
         }
-        return (bool) $settings['markdown_enabled'];
+        return (bool) $settings[$key];
     }
 
     public function register(): void
@@ -49,18 +67,19 @@ class Settings
         register_setting('postie_md_settings_group', self::OPTION, [
             'type' => 'array',
             'sanitize_callback' => [$this, 'sanitize'],
-            'default' => ['markdown_enabled' => true],
+            'default' => ['markdown_enabled' => true, 'html_enabled' => true],
         ]);
     }
 
     /**
      * @param mixed $input
-     * @return array{markdown_enabled: bool}
+     * @return array{markdown_enabled: bool, html_enabled: bool}
      */
     public function sanitize($input): array
     {
         return [
             'markdown_enabled' => !empty($input['markdown_enabled']),
+            'html_enabled'     => !empty($input['html_enabled']),
         ];
     }
 
@@ -87,6 +106,7 @@ class Settings
             return;
         }
         $markdownEnabled = self::isMarkdownEnabled();
+        $htmlEnabled     = self::isHtmlEnabled();
         ?>
         <div class="wrap postie-md-settings-wrap">
             <h1><?php esc_html_e('Postie Markdown Blocks', 'postie-md-plugin'); ?></h1>
@@ -100,7 +120,14 @@ class Settings
                             <?php esc_html_e('Parse Markdown syntax (#, **, etc.) in plain-text emails', 'postie-md-plugin'); ?>
                         </label>
                         <p class="description">
-                            <?php esc_html_e('When off, plain-text emails still convert to Gutenberg paragraph blocks, but Markdown syntax such as "# Heading" is left as literal text instead of becoming a heading block. HTML emails are always normalized into blocks regardless of this setting.', 'postie-md-plugin'); ?>
+                            <?php esc_html_e('When off, Markdown syntax such as "# Heading" or "**bold**" is left as literal text instead of being parsed - including inside an explicit <md>...</md> block. Doesn\'t affect HTML-to-blocks normalization below.', 'postie-md-plugin'); ?>
+                        </p>
+                        <label>
+                            <input type="checkbox" name="postie_md_settings[html_enabled]" value="1" <?php checked($htmlEnabled); ?> />
+                            <?php esc_html_e('Convert content into native Gutenberg blocks', 'postie-md-plugin'); ?>
+                        </label>
+                        <p class="description">
+                            <?php esc_html_e('When off, this plugin does not add any <!-- wp:... --> block markup at all - Postie\'s own content (or Markdown-converted HTML, if Markdown parsing above is on) is saved as-is, opening as a single Classic/HTML block in the editor. Turn this off if you only want Markdown parsing without the block conversion.', 'postie-md-plugin'); ?>
                         </p>
                     </div>
                     <div class="postie-md-subsection">

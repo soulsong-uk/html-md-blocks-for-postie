@@ -27,7 +27,7 @@ By default, Postie saves emailed content as a flat HTML/text blob, so a post cre
 
 1. Install and activate Postie first.
 2. Install and activate this plugin.
-3. Optionally visit Postie's settings > Markdown Blocks to toggle Markdown parsing for plain-text emails (on by default). HTML-email normalization is always on.
+3. Optionally visit Postie's settings > Markdown Blocks to toggle Markdown parsing and/or Gutenberg block conversion independently (both on by default).
 
 == Frequently Asked Questions ==
 

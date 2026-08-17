@@ -193,7 +193,13 @@ class Hooks
                 $content = $this->markdown->convert($content, $hasProtectedMarkdown);
             }
 
-            $converted = $this->htmlToBlocks->convert($content, $this->registry);
+            // html_enabled is the master switch for the whole HtmlToBlocks
+            // pass - off means Postie's content (or Markdown-converted HTML,
+            // if that ran above) is saved exactly as-is, with no
+            // <!-- wp:x --> block markup added at all.
+            $converted = Settings::isHtmlEnabled()
+                ? $this->htmlToBlocks->convert($content, $this->registry)
+                : $content;
 
             if (trim($converted) !== '') {
                 // Postie's own save_post() (postie-message.php) unconditionally
