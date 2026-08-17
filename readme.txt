@@ -4,7 +4,7 @@ Tags: postie, email, markdown, gutenberg, blocks
 Requires at least: 6.2
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 0.1.1
+Stable tag: 0.1.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -39,6 +39,11 @@ Workarounds:
 * Or, if you don't rely on Postie's automatic signature stripping, remove `---` (and `--`) from Postie's "Signature Patterns" setting.
 
 == Changelog ==
+
+= 0.1.2 =
+* Fix: Markdown was never parsed for real mail-client HTML - Thunderbird wraps each paragraph in its own <p>, which made every paragraph individually opaque to Parsedown's raw-HTML-passthrough rule
+* Fix: a bare URL auto-linked by the mail client inside Markdown image/link syntax (e.g. Thunderbird's freetext links) broke image/link recognition - now unwrapped before parsing
+* New: bullet and numbered lists now convert to real core/list blocks (with nested sub-list support) instead of falling back to core/html
 
 = 0.1.1 =
 * Fix: inline images within paragraph text now become their own core/image block instead of being embedded in the paragraph's HTML
