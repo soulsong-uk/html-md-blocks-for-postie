@@ -21,6 +21,7 @@ By default, Postie saves emailed content as a flat HTML/text blob, so a post cre
 * Emailed photo attachments become `core/image` blocks referencing the real WordPress attachment Postie already created, not bare `<img>` tags.
 * Bullet and numbered lists become real `core/list` blocks (with each item as its own `core/list-item`, including nested sub-lists), not plain text.
 * Anything not yet natively mapped (quotes, code, tables - deferred past v1) falls back to a `core/html` block, so content is never silently dropped.
+* Wrap your Markdown in `<md>...</md>` for guaranteed-reliable conversion, especially lists - see the FAQ below.
 
 == Installation ==
 
@@ -45,6 +46,20 @@ Also Postie's own behavior, not this plugin's - and also a Markdown collision. I
 Workarounds:
 * Turn off "Allow Subject In Mail" under Postie's Message settings tab if you don't use that feature - the plugin then uses your email's real Subject header as-is.
 * Or avoid starting the email body with a `#` heading as literally the first character.
+
+= My Markdown list came through as a jumbled mess, or a heading swallowed way more text than expected =
+
+Also Postie's own behavior. Postie's own newline-collapsing (its "Filter newlines" setting, on by default) preserves a *blank-line* paragraph break, but collapses a *single* line break down to just a space - and Markdown lists (and a heading immediately followed by its list, per standard convention) use single line breaks between items, not blank lines. That distinction is gone by the time this plugin ever sees the content, so a list written the normal way can come through merged into one run-on line, sometimes with stray `*` characters misread as italics.
+
+The fix: wrap the Markdown portion of your email in `<md>` and `</md>` tags:
+
+`<md>`
+`## Active Priorities`
+`* First item`
+`* Second item`
+`</md>`
+
+Content inside `<md>...</md>` is shielded from Postie's own content processing entirely (newline-collapsing, signature stripping, subject extraction - all three) before this plugin runs, so it converts using your email's exact original line breaks. This is the single most reliable way to guarantee a list, or any other multi-line Markdown structure, converts correctly - recommended for any email with a list in it.
 
 == Changelog ==
 

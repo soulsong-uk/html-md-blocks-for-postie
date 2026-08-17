@@ -24,13 +24,35 @@ class MarkdownConverter
      * genuine paragraph boundaries again - it does not touch anything else
      * Postie's pipeline did (attachment HTML, auto-linked URLs, etc.).
      */
-    public function convert(string $content): string
+    /**
+     * @param bool $alreadyHasGenuineNewlines True for content decoded from
+     *             an explicit <md>...</md> marker (see Hooks::onPostPre()/
+     *             restoreProtectedBlocks()) - that content was shielded from
+     *             Postie's filter_Newlines() entirely (never touched by it),
+     *             so its newlines are already exactly what the sender typed.
+     *             Skips recoverParagraphBreaks() in that case: widening
+     *             already-genuine single line breaks (e.g. between Markdown
+     *             list items, which use single breaks by convention, not
+     *             blank lines) into blank-line paragraph breaks would
+     *             over-loosen tight lists and could split a soft-wrapped
+     *             sentence into separate paragraphs. stripWrapperTags(),
+     *             unwrapFreetextLinks(), and collapseRepeatedSpaces() still
+     *             run either way - a decoded block extracted from a mail
+     *             client's HTML part can still contain that same client's
+     *             own <p>-wrapping and line-wrap padding artifacts inside
+     *             the <md> boundaries.
+     */
+    public function convert(string $content, bool $alreadyHasGenuineNewlines = false): string
     {
         $content = $this->unwrapFreetextLinks($content);
         $content = $this->stripWrapperTags($content);
 
-        $config = function_exists('postie_config_read') ? postie_config_read() : null;
-        $source = $this->recoverParagraphBreaks($content, $config);
+        if ($alreadyHasGenuineNewlines) {
+            $source = $content;
+        } else {
+            $config = function_exists('postie_config_read') ? postie_config_read() : null;
+            $source = $this->recoverParagraphBreaks($content, $config);
+        }
         $source = $this->collapseRepeatedSpaces($source);
 
         return $this->parsedownToHtml($source);

@@ -127,6 +127,12 @@ class Settings
                             ?>
                         </p>
                     </div>
+                    <div class="postie-md-subsection">
+                        <p class="postie-md-field-heading"><?php esc_html_e('Recommended: Wrap Markdown in <md>...</md>', 'postie-md-plugin'); ?></p>
+                        <p class="description">
+                            <?php esc_html_e('Postie\'s own newline-collapsing preserves a blank-line paragraph break but reduces a single line break to just a space - the exact line-break style Markdown lists use between items. Wrapping the Markdown portion of an email in <md> and </md> tags shields it from that (and from the "---"/"#" conflicts above) entirely, using your email\'s exact original line breaks. Recommended for any email containing a list.', 'postie-md-plugin'); ?>
+                        </p>
+                    </div>
                 </div>
                 <?php submit_button(); ?>
             </form>
