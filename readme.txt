@@ -4,7 +4,7 @@ Tags: postie, email, markdown, gutenberg, blocks
 Requires at least: 6.2
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 0.1.6
+Stable tag: 0.1.7
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -68,6 +68,9 @@ Also Postie's own behavior. Postie's own newline-collapsing (its "Filter newline
 Fix: wrap your Markdown in `<md>...</md>` (see above) - there's no alternative workaround for this one short of avoiding lists entirely, since it's caused by Postie's own default settings rather than one specific character sequence.
 
 == Changelog ==
+
+= 0.1.7 =
+* Change: renamed from Postie Markdown Blocks to Postie Blocks Addon - block conversion is the primary feature, Markdown parsing is a secondary/optional one. Namespace, constants, option name (with automatic migration), settings slug, and CSS classes all updated to match; no functional changes
 
 = 0.1.6 =
 * New: blockquotes now convert to real core/quote blocks (with native inner blocks) instead of falling back to core/html
