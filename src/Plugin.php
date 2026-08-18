@@ -27,7 +27,11 @@ class Plugin
 
     public function boot(): void
     {
-        load_plugin_textdomain('postie-blocks-addon', false, dirname(plugin_basename(POSTIE_BLOCKS_PLUGIN_FILE)) . '/languages');
+        // No load_plugin_textdomain() call here - discouraged since WP 4.6
+        // (flagged by the WordPress.org Plugin Check tool). WordPress
+        // auto-loads a plugin's translations by slug as needed; this plugin
+        // also ships no /languages .mo files, so the call did nothing
+        // anyway even before this was removed.
 
         // Registered unconditionally, not just is_admin() - Postie's own
         // email processing runs via WP-Cron and the "?postie=get-mail"
