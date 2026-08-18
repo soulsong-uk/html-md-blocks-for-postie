@@ -164,34 +164,6 @@ class Settings
                             <?php echo esc_html(Strings::get('html_toggle_desc')); ?>
                         </p>
                     </div>
-                    <div class="postie-blocks-subsection">
-                        <p class="postie-blocks-field-heading"><?php echo esc_html(Strings::get('md_wrapper_heading')); ?></p>
-                        <p class="description">
-                            <?php echo esc_html(Strings::get('md_wrapper_desc')); ?>
-                        </p>
-                    </div>
-                    <div class="postie-blocks-subsection">
-                        <p class="postie-blocks-field-heading"><?php echo esc_html(Strings::get('conflict_signature_heading')); ?></p>
-                        <p class="description">
-                            <?php
-                            printf(
-                                esc_html(Strings::get('conflict_signature_desc')),
-                                '<a href="' . esc_url(admin_url('admin.php?page=postie-settings')) . '">' . esc_html(Strings::get('postie_settings_link_text')) . '</a>'
-                            );
-                            ?>
-                        </p>
-                    </div>
-                    <div class="postie-blocks-subsection">
-                        <p class="postie-blocks-field-heading"><?php echo esc_html(Strings::get('conflict_subject_heading')); ?></p>
-                        <p class="description">
-                            <?php
-                            printf(
-                                esc_html(Strings::get('conflict_subject_desc')),
-                                '<a href="' . esc_url(admin_url('admin.php?page=postie-settings')) . '">' . esc_html(Strings::get('postie_settings_link_text')) . '</a>'
-                            );
-                            ?>
-                        </p>
-                    </div>
                 </div>
                 <?php submit_button(); ?>
             </form>

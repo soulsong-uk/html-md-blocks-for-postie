@@ -16,56 +16,32 @@ This is an addon for the Postie plugin (email-to-post). It does nothing on its o
 
 By default, Postie saves emailed content as a flat HTML/text blob, so a post created from an email opens in the block editor as one big Classic/HTML block rather than proper paragraph/heading/image blocks - and a big blob is unpleasant to edit afterward. Postie Blocks Addon hooks Postie's own `postie_post_pre` and `postie_post_before` filters (and `postie_file_added`) to convert that content into real, individually-editable Gutenberg blocks before the post is saved:
 
-* Plain-text emails written with Markdown syntax (`#`/`##` headings, blank-line paragraphs, `**bold**`, `[links](url)`, `*`/`-` lists) are parsed into native blocks.
-* Rich HTML emails (Outlook/Gmail-style formatted mail) are normalized into equivalent blocks.
+* Rich HTML emails (Outlook/Gmail-style formatted mail) are normalized into blocks.
+* Markdown syntax (`#`/`##` headings, blank-line paragraphs, `**bold**`, `[links](url)`, `*`/`-` lists, `>` quotes) wrapped in an explicit `<md>...</md>` block is parsed into native blocks. See the FAQ below.
 * Emailed photo attachments become `core/image` blocks referencing the real WordPress attachment Postie already created, not bare `<img>` tags.
 * Bullet and numbered lists become real `core/list` blocks (with each item as its own `core/list-item`, including nested sub-lists), not plain text.
 * Blockquotes (`>`) become real `core/quote` blocks, with their contents as native inner blocks.
 * Anything not yet natively mapped (code, tables - deferred past v1) falls back to a `core/html` block, so content is never silently dropped.
-* Wrap your Markdown in `<md>...</md>` for guaranteed-reliable conversion - shields it from several of Postie's own content-processing conventions that can otherwise collide with Markdown syntax (lists, "---" rules, a leading "#" heading). See the FAQ below.
 
 == Installation ==
 
 1. Install and activate Postie first.
 2. Install and activate this plugin.
-3. Optionally visit Postie's settings > Blocks to toggle Markdown parsing and/or Gutenberg block conversion independently (both on by default).
+3. Optionally visit Postie's settings > Postie Blocks to toggle Markdown parsing and/or Gutenberg block conversion independently (both on by default).
 
 == Frequently Asked Questions ==
 
-= Recommended: always wrap your Markdown in <md>...</md> =
+= How do I get Markdown syntax converted? =
 
-Postie has several of its own content-processing features - collapsing single line breaks, stripping anything after a "---" line as a signature, pulling an inline "#subject#" out of the body - that all run *before* this plugin ever sees your email, and each can silently damage Markdown syntax that happens to resemble one of Postie's own conventions (see the three entries below for specifics). Wrapping the Markdown portion of your email like this sidesteps all three at once:
+Wrap the part of the email you want parsed as Markdown in `<md>` and `</md>` tags, each on their own line:
 
 `<md>`
 `# My Heading`
-`---`
 `* A list item`
 `* Another item`
 `</md>`
 
-Content inside `<md>...</md>` is shielded from Postie's own content processing entirely before this plugin runs, and converts using your email's exact original line breaks. This is the single most reliable way to guarantee any Markdown email - especially one with a list, a "---" rule, or a heading as the very first line - converts correctly. Each entry below also lists an alternative if you'd rather not use `<md>`.
-
-= My email had a "---" line and everything after it disappeared =
-
-Postie's own behavior, not this plugin's: its default settings treat a line containing only `---` (or `--`) as the start of an email signature and strip everything from that point onward, before this plugin ever sees the content (Postie's `sig_pattern_list` setting, under Postie's own settings screen, includes `---` by default). Markdown commonly uses `---` on its own line as a thematic break (horizontal rule), so a Markdown email using that syntax loses everything after it.
-
-Fix: wrap your Markdown in `<md>...</md>` (see above). Alternatively:
-* Use `***` or `___` instead of `---` for a horizontal rule - neither is in Postie's default signature-pattern list.
-* Or remove `---` (and `--`) from Postie's "Signature Patterns" setting if you don't rely on automatic signature stripping.
-
-= My post title/slug ended up containing half my email body =
-
-Also Postie's own behavior, and also a Markdown collision. If Postie's "Allow Subject In Mail" setting (Message tab) is on and the email body starts with `#`, Postie treats everything up to the *next* `#` anywhere in the body as the subject and strips it out - intended for a deliberate `#subject#` marker on the first line, but a Markdown email starting with a `# Heading` (with a later `##`/`###` heading further down) gets its entire opening section swallowed into the post title instead.
-
-Fix: wrap your Markdown in `<md>...</md>` (see above), with the `<md>` tag itself as the very first thing in the body - the body then no longer starts with a literal `#`. Alternatively:
-* Turn off "Allow Subject In Mail" under Postie's Message settings tab if you don't use that feature.
-* Or avoid starting the email body with a `#` heading as literally the first character.
-
-= My Markdown list came through as a jumbled mess, or a heading swallowed way more text than expected =
-
-Also Postie's own behavior. Postie's own newline-collapsing (its "Filter newlines" setting, on by default) preserves a *blank-line* paragraph break, but collapses a *single* line break down to just a space - and Markdown lists (and a heading immediately followed by its list, per standard convention) use single line breaks between items, not blank lines. That distinction is gone by the time this plugin ever sees the content, so a list written the normal way can come through merged into one run-on line, sometimes with stray `*` characters misread as italics.
-
-Fix: wrap your Markdown in `<md>...</md>` (see above) - there's no alternative workaround for this one short of avoiding lists entirely, since it's caused by Postie's own default settings rather than one specific character sequence.
+This is deliberate, not automatic: this plugin never guesses whether some arbitrary content "looks like" Markdown - only content inside an explicit `<md>...</md>` block is ever parsed as Markdown. Content outside the wrapper (or the whole email, if you don't use one) is treated as plain content. As a side benefit, content inside `<md>...</md>` is also fully shielded from Postie's own content-processing (its newline-collapsing, `---`-line signature stripping, and `#subject#` inline-subject extraction all run before this plugin ever sees the content, and could otherwise silently damage unwrapped Markdown syntax that happens to resemble one of those conventions) - using `<md>` sidesteps all of that automatically, with no workaround needed.
 
 == Changelog ==
 

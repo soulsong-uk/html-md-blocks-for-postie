@@ -5,57 +5,36 @@ namespace PostieBlocksAddon;
 defined('ABSPATH') || exit;
 
 /**
- * Converts a plain-text email body into semantic HTML via the vendored
+ * Converts a Markdown email body into semantic HTML via the vendored
  * Parsedown library (vendor/Parsedown.php, MIT). Only handles Markdown ->
  * HTML; block-type decisions (which tag becomes which Gutenberg block,
  * image attachment IDs) are made afterwards by HtmlToBlocks, uniformly for
- * both Markdown- and HTML-sourced emails.
+ * both Markdown-converted and originally-HTML content.
+ *
+ * Only ever called by Hooks::onPostBefore() on content decoded from an
+ * explicit <md>...</md> block (see Hooks::restoreProtectedBlocks()) - never
+ * on a heuristic guess at whether some arbitrary content "looks like"
+ * Markdown. That guess used to exist and caused real problems: it fired on
+ * ordinary prose that happened to contain a stray "#" or "*", and worse, it
+ * ran on content Postie's own filter_Newlines()/filter_RemoveSignature()/
+ * extract_subject_body() had already silently mangled before this plugin
+ * ever saw it, since those Postie behaviours run unconditionally regardless
+ * of whether the email was actually meant to contain Markdown. Because this
+ * class now only ever receives content that was shielded from all of that
+ * at postie_post_pre (see Hooks::protectMarkdownBlocks()), its newlines are
+ * always exactly what the sender typed - there is no "recover paragraph
+ * breaks Postie's own processing collapsed" step to run here any more.
  */
 class MarkdownConverter
 {
-    /**
-     * Postie's own filter_Newlines() (postie-filters.php) always runs on
-     * post content before postie_post_before fires, regardless of whether
-     * the email was plain-text or HTML - it is gated on the site-wide
-     * "filternewlines"/"convertnewline" settings, not on content type. By
-     * the time we see the content, blank-line paragraph breaks may already
-     * have been collapsed into a single line break or converted to <br>
-     * tags. This reverses that specific transform (only) so Parsedown sees
-     * genuine paragraph boundaries again - it does not touch anything else
-     * Postie's pipeline did (attachment HTML, auto-linked URLs, etc.).
-     */
-    /**
-     * @param bool $alreadyHasGenuineNewlines True for content decoded from
-     *             an explicit <md>...</md> marker (see Hooks::onPostPre()/
-     *             restoreProtectedBlocks()) - that content was shielded from
-     *             Postie's filter_Newlines() entirely (never touched by it),
-     *             so its newlines are already exactly what the sender typed.
-     *             Skips recoverParagraphBreaks() in that case: widening
-     *             already-genuine single line breaks (e.g. between Markdown
-     *             list items, which use single breaks by convention, not
-     *             blank lines) into blank-line paragraph breaks would
-     *             over-loosen tight lists and could split a soft-wrapped
-     *             sentence into separate paragraphs. stripWrapperTags(),
-     *             unwrapFreetextLinks(), and collapseRepeatedSpaces() still
-     *             run either way - a decoded block extracted from a mail
-     *             client's HTML part can still contain that same client's
-     *             own <p>-wrapping and line-wrap padding artifacts inside
-     *             the <md> boundaries.
-     */
-    public function convert(string $content, bool $alreadyHasGenuineNewlines = false): string
+    public function convert(string $content): string
     {
         $content = $this->unwrapFreetextLinks($content);
         $content = $this->stripWrapperTags($content);
+        $content = $this->normalizeLineBreaks($content);
+        $content = $this->collapseRepeatedSpaces($content);
 
-        if ($alreadyHasGenuineNewlines) {
-            $source = $content;
-        } else {
-            $config = function_exists('postie_config_read') ? postie_config_read() : null;
-            $source = $this->recoverParagraphBreaks($content, $config);
-        }
-        $source = $this->collapseRepeatedSpaces($source);
-
-        return $this->parsedownToHtml($source);
+        return $this->parsedownToHtml($content);
     }
 
     /**
@@ -70,7 +49,7 @@ class MarkdownConverter
      * ..." (marker plus a wide run of padding spaces) turns "Updated ..."
      * into a <pre><code> block nested in the <li> instead of ordinary list
      * item text. Only touches space/tab runs, never the "\n\n"
-     * paragraph-break markers recoverParagraphBreaks() just built, so this
+     * paragraph-break markers normalizeLineBreaks() just built, so this
      * can't undo that work. Trade-off: a genuine 4-space-indented code
      * block (no fenced ``` delimiters) would also be collapsed to a normal
      * paragraph - accepted for v1, since fenced code blocks are unaffected
@@ -112,10 +91,9 @@ class MarkdownConverter
     /**
      * Strips generic non-semantic wrapper tags entirely - opening and
      * closing, attributes and all - leaving their inner content in place.
-     * Only reached once Hooks::onPostBefore's looksLikeMarkdown() check has
-     * already decided this content is Markdown-flavored text, not
-     * meaningful HTML, so these tags carry no structure worth preserving as
-     * HTML - they are reliably just a mail client's own rendering artifact.
+     * These tags carry no structure worth preserving as HTML - they are
+     * reliably just a mail client's own rendering artifact from generating
+     * the HTML alternative part of what the sender composed as plain text.
      *
      * This matters because Parsedown (like CommonMark generally) treats any
      * block starting with a literal HTML tag as a raw HTML passthrough block
@@ -127,7 +105,7 @@ class MarkdownConverter
      *  - div/span: reliably just a single outer wrapper (e.g. Gmail/Outlook
      *    wrapping a whole plain-text-composed message in one
      *    "<div dir="ltr">...</div>", with <br> tags - handled separately by
-     *    recoverParagraphBreaks() - marking the line breaks). Stripped to
+     *    normalizeLineBreaks() - marking the line breaks). Stripped to
      *    nothing; no paragraph-boundary information would be lost.
      *  - p: mail clients (confirmed: Thunderbird's auto-generated HTML
      *    alternative for a plain-text compose) commonly wrap EACH paragraph
@@ -147,65 +125,20 @@ class MarkdownConverter
         return (string) preg_replace('/<\/?(?:div|span)\b[^>]*>/i', '', $content);
     }
 
-    private function recoverParagraphBreaks(string $content, $config): string
-    {
-        // Always normalize literal <br> tags into paragraph/line breaks
-        // first, regardless of Postie's own filternewlines/convertnewline
-        // settings. These tags can come from two different places that this
-        // function can't tell apart and doesn't need to: Postie's own
-        // filter_Newlines() (only when convertnewline is on), OR - just as
-        // commonly - the sending mail client's own HTML rendering (e.g.
-        // Gmail/Outlook wrapping a plain-text-composed message in a single
-        // <div> with <br> tags for what the user saw as blank lines). Either
-        // way a <br> means the same thing: a line break the sender intended.
-        $content = (string) preg_replace('/(?:<br\s*\/?>\s*){2,}/i', "\n\n", $content);
-        $content = (string) preg_replace('/<br\s*\/?>\s*/i', "\n", $content);
-
-        $filternewlines = $config ? (bool) ($config->filternewlines ?? true) : true;
-        $convertnewline = $config ? (bool) ($config->convertnewline ?? false) : false;
-
-        if (!$filternewlines || $convertnewline) {
-            // Either untouched by Postie (genuine paragraph breaks already
-            // present), or already normalized by the <br> pass above.
-            return $content;
-        }
-
-        // Postie's default: filternewlines on, convertnewline off. Every
-        // paragraph break collapsed to a single "\r\n" and every mid-paragraph
-        // break collapsed to a space - so every remaining line break already
-        // marks a genuine paragraph boundary. Widen each one back to a blank
-        // line for Parsedown.
-        return (string) preg_replace('/\r\n|\r|\n/', "\n\n", $content);
-    }
-
     /**
-     * Content-pattern-based Markdown detection, used by Hooks::onPostBefore
-     * instead of trusting which MIME part (html vs text) the email happened
-     * to populate. That MIME-based signal is unreliable: many mail clients
-     * (Gmail, Outlook) send an "HTML" part that is just the user's literally
-     * typed Markdown text wrapped in a single <div>/<br> structure, not real
-     * semantic HTML - so relying on "$email['html'] is non-empty" to mean
-     * "don't run Markdown parsing" silently drops all structure for exactly
-     * the senders most likely to be writing Markdown in the first place.
-     *
-     * @param string $plainText Content with HTML tags already stripped
-     *                          (e.g. via wp_strip_all_tags()).
+     * Normalizes literal <br> tags into paragraph/line breaks - the only
+     * newline-related cleanup this class does now that Markdown only ever
+     * reaches it via an explicit <md>...</md> block already shielded from
+     * Postie's own processing (see the class docblock). A <br> tag here can
+     * only have come from the sending mail client's own HTML rendering (e.g.
+     * Gmail/Outlook wrapping a plain-text-composed message in a single
+     * <div> with <br> tags for what the sender saw as line breaks) - never
+     * from Postie, which this content was never exposed to.
      */
-    public static function looksLikeMarkdown(string $plainText): bool
+    private function normalizeLineBreaks(string $content): string
     {
-        $patterns = [
-            '/(^|\n)[ \t]{0,3}#{1,6}[ \t]+\S/',   // # / ## / ... heading
-            '/(^|\n)[ \t]{0,3}[-*+][ \t]+\S/',    // - / * / + list item
-            '/!\[[^\]]*\]\([^)]+\)/',              // ![alt](url) image
-            '/\[[^\]]+\]\([^)]+\)/',               // [text](url) link
-            '/\*\*[^*\n]+\*\*/',                   // **bold**
-        ];
-        foreach ($patterns as $pattern) {
-            if (preg_match($pattern, $plainText) === 1) {
-                return true;
-            }
-        }
-        return false;
+        $content = (string) preg_replace('/(?:<br\s*\/?>\s*){2,}/i', "\n\n", $content);
+        return (string) preg_replace('/<br\s*\/?>\s*/i', "\n", $content);
     }
 
     private function parsedownToHtml(string $markdown): string
@@ -230,13 +163,14 @@ class MarkdownConverter
 
         $parser = new \Parsedown();
         // Safe mode (escaping raw inline HTML in the source) is deliberately
-        // left OFF: by the time this runs, Postie's own filter_Linkify has
-        // already turned bare URLs in the original text into real <a href>
-        // tags, and filter_AttachmentTemplates/filter_ReplaceImagePlaceHolders
-        // may already have injected real <img>/<div> markup. Safe mode would
-        // HTML-escape all of that Postie-generated markup as literal text.
-        // Sanitization of anything genuinely unsafe still happens the normal
-        // WordPress way at wp_insert_post() via kses.
+        // left OFF: unwrapFreetextLinks()/stripWrapperTags() above already
+        // handle the specific mail-client HTML artifacts this content can
+        // contain (freetext-linked URLs, div/span/p wrappers), so any HTML
+        // still present at this point is more likely genuine inline
+        // formatting from a rich-text-composed email (<b>, <i>, etc.) that
+        // should pass through, not something to escape into visible literal
+        // tags. Sanitization of anything genuinely unsafe still happens the
+        // normal WordPress way at wp_insert_post() via kses.
         $parser->setBreaksEnabled(true);
 
         return $parser->text($markdown);

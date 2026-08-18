@@ -173,24 +173,23 @@ class Hooks
             // Unshield any explicit <md>...</md> block first - decoded back
             // to the sender's exact original text regardless of whether
             // Markdown parsing ends up running below, so a disabled setting
-            // (or some other early exit) never leaves the raw sentinel
-            // gibberish sitting in the published post.
+            // never leaves the raw sentinel gibberish sitting in the
+            // published post.
             [$content, $hasProtectedMarkdown] = $this->restoreProtectedBlocks($content);
 
-            // Detected from the actual content, not from which MIME part
-            // (html vs text) the email happened to populate - see
-            // MarkdownConverter::looksLikeMarkdown()'s docblock for why the
-            // MIME-based signal is unreliable (many mail clients wrap
-            // literally-typed Markdown in an HTML <div>/<br> structure).
-            // A restored protected block is treated as Markdown
-            // unconditionally - the sender said so explicitly by wrapping
-            // it, no heuristic needed - and its newlines are passed through
-            // as-is (see MarkdownConverter::convert()'s $alreadyHasGenuineNewlines
-            // docblock) since they were never touched by Postie's own
-            // filter_Newlines() in the first place.
-            if (Settings::isMarkdownEnabled()
-                && ($hasProtectedMarkdown || MarkdownConverter::looksLikeMarkdown(wp_strip_all_tags($content)))) {
-                $content = $this->markdown->convert($content, $hasProtectedMarkdown);
+            // Markdown is ONLY ever parsed for a block the sender explicitly
+            // wrapped in <md>...</md> - deliberate, not a heuristic guess at
+            // whether the content "looks like" Markdown. That guess used to
+            // exist and caused real problems: it fired on ordinary prose
+            // that happened to contain a stray "#" or "*", and for content
+            // Postie's own filters had already mangled before this plugin
+            // ever saw it. Requiring the explicit wrapper means Markdown
+            // conversion only ever runs on content this plugin protected
+            // from Postie's own processing at postie_post_pre (see
+            // protectMarkdownBlocks()), so there is nothing left to guess
+            // and nothing for Postie's own filters to have damaged.
+            if (Settings::isMarkdownEnabled() && $hasProtectedMarkdown) {
+                $content = $this->markdown->convert($content);
             }
 
             // html_enabled is the master switch for the whole HtmlToBlocks
