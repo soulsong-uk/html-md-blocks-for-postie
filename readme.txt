@@ -14,7 +14,9 @@ Converts Postie's emailed-in post content (Markdown plain-text or rich HTML) int
 
 This is an addon for the Postie plugin (email-to-post). It does nothing on its own - Postie must be installed and active.
 
-By default, Postie saves emailed content as a flat HTML/text blob, so a post created from an email opens in the block editor as one big Classic/HTML block rather than proper paragraph/heading/image blocks - and a big blob is unpleasant to edit afterward. Postie Blocks Addon hooks Postie's own `postie_post_pre` and `postie_post_before` filters (and `postie_file_added`) to convert that content into real, individually-editable Gutenberg blocks before the post is saved:
+By default, Postie saves emailed content as a flat HTML/text blob, so a post created from an email opens in the block editor as one big Classic/HTML block rather than proper paragraph/heading/image blocks - and a big blob is difficult to edit afterward. 
+
+Postie Blocks Addon converts that emailed content into real, individually-editable Gutenberg blocks before the post is saved with the ability to further format using markdown syntax within `<md>...</md>`.
 
 * Rich HTML emails (Outlook/Gmail-style formatted mail) are normalized into blocks.
 * Markdown syntax (`#`/`##` headings, blank-line paragraphs, `**bold**`, `[links](url)`, `*`/`-` lists, `>` quotes) wrapped in an explicit `<md>...</md>` block is parsed into native blocks. See the FAQ below.
