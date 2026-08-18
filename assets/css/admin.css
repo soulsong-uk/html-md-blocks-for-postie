@@ -1,8 +1,8 @@
-/* Postie Markdown Blocks - admin settings page.
+/* Postie Blocks Addon - admin settings page.
    Workspace "bracketed card" pattern, adapted from DeployGuard's
-   assets/css/admin.css with the postie-md- class prefix. */
+   assets/css/admin.css with the postie-blocks- class prefix. */
 
-.postie-md-card {
+.postie-blocks-card {
     background: #fff;
     border-left: 4px solid #2271b1;
     border-radius: 8px;
@@ -10,18 +10,18 @@
     max-width: 700px;
 }
 
-.postie-md-subsection {
+.postie-blocks-subsection {
     background: #f9f9f9;
     border-radius: 5px;
     padding: 15px;
     margin-top: 25px;
 }
 
-.postie-md-subsection:first-child {
+.postie-blocks-subsection:first-child {
     margin-top: 0;
 }
 
-.postie-md-field-heading {
+.postie-blocks-field-heading {
     font-size: 12px;
     font-weight: 600;
     text-transform: uppercase;

@@ -1,6 +1,6 @@
 <?php
 
-namespace PostieMd;
+namespace PostieBlocksAddon;
 
 defined('ABSPATH') || exit;
 
@@ -27,7 +27,7 @@ class Plugin
 
     public function boot(): void
     {
-        load_plugin_textdomain('postie-md-plugin', false, dirname(plugin_basename(POSTIE_MD_PLUGIN_FILE)) . '/languages');
+        load_plugin_textdomain('postie-blocks-addon', false, dirname(plugin_basename(POSTIE_BLOCKS_PLUGIN_FILE)) . '/languages');
 
         // Registered unconditionally, not just is_admin() - Postie's own
         // email processing runs via WP-Cron and the "?postie=get-mail"

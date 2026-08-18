@@ -1,4 +1,4 @@
-=== Postie Markdown Blocks ===
+=== Postie Blocks Addon ===
 Contributors: James Harvey
 Tags: postie, email, markdown, gutenberg, blocks
 Requires at least: 6.2
@@ -14,7 +14,7 @@ Converts Postie's emailed-in post content (Markdown plain-text or rich HTML) int
 
 This is an addon for the Postie plugin (email-to-post). It does nothing on its own - Postie must be installed and active.
 
-By default, Postie saves emailed content as a flat HTML/text blob, so a post created from an email opens in the block editor as one big Classic/HTML block rather than proper paragraph/heading/image blocks. Postie Markdown Blocks hooks Postie's own `postie_post_pre` and `postie_post_before` filters (and `postie_file_added`) to convert that content into real Gutenberg blocks before the post is saved:
+By default, Postie saves emailed content as a flat HTML/text blob, so a post created from an email opens in the block editor as one big Classic/HTML block rather than proper paragraph/heading/image blocks - and a big blob is unpleasant to edit afterward. Postie Blocks Addon hooks Postie's own `postie_post_pre` and `postie_post_before` filters (and `postie_file_added`) to convert that content into real, individually-editable Gutenberg blocks before the post is saved:
 
 * Plain-text emails written with Markdown syntax (`#`/`##` headings, blank-line paragraphs, `**bold**`, `[links](url)`, `*`/`-` lists) are parsed into native blocks.
 * Rich HTML emails (Outlook/Gmail-style formatted mail) are normalized into equivalent blocks.
@@ -28,7 +28,7 @@ By default, Postie saves emailed content as a flat HTML/text blob, so a post cre
 
 1. Install and activate Postie first.
 2. Install and activate this plugin.
-3. Optionally visit Postie's settings > Markdown Blocks to toggle Markdown parsing and/or Gutenberg block conversion independently (both on by default).
+3. Optionally visit Postie's settings > Blocks to toggle Markdown parsing and/or Gutenberg block conversion independently (both on by default).
 
 == Frequently Asked Questions ==
 

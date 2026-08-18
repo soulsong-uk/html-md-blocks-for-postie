@@ -1,6 +1,6 @@
 <?php
 
-namespace PostieMd;
+namespace PostieBlocksAddon;
 
 defined('ABSPATH') || exit;
 
