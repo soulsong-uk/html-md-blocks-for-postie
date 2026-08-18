@@ -4,7 +4,7 @@ Tags: postie, email, markdown, gutenberg, blocks
 Requires at least: 6.2
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 0.1.7
+Stable tag: 0.1.8
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -44,6 +44,11 @@ Wrap the part of the email you want parsed as Markdown in `<md>` and `</md>` tag
 This is deliberate, not automatic: this plugin never guesses whether some arbitrary content "looks like" Markdown - only content inside an explicit `<md>...</md>` block is ever parsed as Markdown. Content outside the wrapper (or the whole email, if you don't use one) is treated as plain content. As a side benefit, content inside `<md>...</md>` is also fully shielded from Postie's own content-processing (its newline-collapsing, `---`-line signature stripping, and `#subject#` inline-subject extraction all run before this plugin ever sees the content, and could otherwise silently damage unwrapped Markdown syntax that happens to resemble one of those conventions) - using `<md>` sidesteps all of that automatically, with no workaround needed.
 
 == Changelog ==
+
+= 0.1.8 =
+* Change: Markdown is now only ever parsed inside an explicit <md>...</md> block - the previous heuristic that guessed whether arbitrary content looked like Markdown has been removed entirely
+* Change: settings page rewritten in the positive (what each setting does, not what breaks when off), with the now-unnecessary Recommended/Known Conflict sections removed
+* Change: Markdown toggle renamed to 'Convert Markdown to Gutenberg Blocks' with a worked <md> example shown directly on the settings page
 
 = 0.1.7 =
 * Change: renamed from Postie Markdown Blocks to Postie Blocks Addon - block conversion is the primary feature, Markdown parsing is a secondary/optional one. Namespace, constants, option name (with automatic migration), settings slug, and CSS classes all updated to match; no functional changes
