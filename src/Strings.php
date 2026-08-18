@@ -26,8 +26,11 @@ class Strings
 
         // Settings page - Content Conversion subsection
         'content_conversion_heading' => 'Content Conversion',
-        'markdown_toggle_label'      => 'Parse Markdown syntax',
-        'markdown_toggle_desc'       => 'Converts Markdown syntax - headings, **bold**/*italic*, links, images, lists - into native Gutenberg blocks, but only inside an explicit <md> and </md> wrapper in the email body (e.g. wrap the styled part between a line containing just "<md>" and a line containing just "</md>"). Content outside <md> tags is left as plain content and never scanned for Markdown syntax.',
+        'markdown_toggle_label'         => 'Convert Markdown to Gutenberg Blocks',
+        'markdown_toggle_desc'          => 'Wrap any part of your email in <md> and </md> tags to turn it into nicely styled content — headings, bold, italic, links, images, and lists all get formatted automatically.',
+        'markdown_toggle_desc_outside'  => 'Anything outside the <md> tags stays as plain text, exactly as written.',
+        'markdown_toggle_example_label' => 'Example:',
+        'markdown_toggle_example'       => "<md>\n# Welcome!\nThis is **bold** and this is *italic*.\n- Item one\n- Item two\n</md>",
         'html_toggle_label'          => 'Convert content into native Gutenberg blocks',
         'html_toggle_desc'           => 'Wraps the finished content - including any Markdown conversion above - in real Gutenberg block markup (paragraphs, headings, images, lists, quotes), so the post opens as separate, individually editable blocks instead of one Classic/HTML block.',
     ];

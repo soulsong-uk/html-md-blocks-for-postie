@@ -156,6 +156,13 @@ class Settings
                         <p class="description">
                             <?php echo esc_html(Strings::get('markdown_toggle_desc')); ?>
                         </p>
+                        <p class="description">
+                            <?php echo esc_html(Strings::get('markdown_toggle_desc_outside')); ?>
+                        </p>
+                        <p class="description">
+                            <strong><?php echo esc_html(Strings::get('markdown_toggle_example_label')); ?></strong>
+                        </p>
+                        <pre class="postie-blocks-example"><code><?php echo esc_html(Strings::get('markdown_toggle_example')); ?></code></pre>
                         <label>
                             <input type="checkbox" name="postie_blocks_settings[html_enabled]" value="1" <?php checked($htmlEnabled); ?> />
                             <?php echo esc_html(Strings::get('html_toggle_label')); ?>

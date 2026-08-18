@@ -31,3 +31,14 @@
     padding-bottom: 4px;
     margin: 0 0 10px;
 }
+
+.postie-blocks-example {
+    background: #f0f0f1;
+    border: 1px solid #dcdcde;
+    border-radius: 4px;
+    padding: 10px 12px;
+    margin: 4px 0 10px;
+    font-size: 13px;
+    line-height: 1.6;
+    overflow-x: auto;
+}
