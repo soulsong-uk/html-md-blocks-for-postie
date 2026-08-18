@@ -87,8 +87,8 @@ class Settings
         // entry, so this addon reads as part of Postie's settings surface.
         add_submenu_page(
             'postie-settings',
-            __('Blocks', 'postie-blocks-addon'),
-            __('Blocks', 'postie-blocks-addon'),
+            __('Postie Blocks', 'postie-blocks-addon'),
+            __('Postie Blocks', 'postie-blocks-addon'),
             'manage_options',
             'postie-blocks',
             [$this, 'renderPage']
