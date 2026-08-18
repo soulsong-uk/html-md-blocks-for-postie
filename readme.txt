@@ -2,7 +2,7 @@
 Contributors: James Harvey
 Tags: postie, email, markdown, gutenberg, blocks
 Requires at least: 6.2
-Tested up to: 6.6
+Tested up to: 7.0
 Requires PHP: 7.4
 Stable tag: 0.1.7
 License: GPLv2 or later

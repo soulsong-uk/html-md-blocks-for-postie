@@ -49,7 +49,7 @@ add_action('plugins_loaded', function (): void {
             }
             printf(
                 '<div class="notice notice-error"><p>%s</p></div>',
-                esc_html__('Postie Blocks Addon requires the Postie plugin to be installed and active - it has no effect on its own.', 'postie-blocks-addon')
+                esc_html(\PostieBlocksAddon\Strings::get('requires_postie_notice'))
             );
         });
         return;

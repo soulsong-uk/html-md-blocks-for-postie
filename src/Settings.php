@@ -8,7 +8,8 @@ defined('ABSPATH') || exit;
  * Two toggles - Markdown parsing and HTML-to-blocks normalization can each
  * be switched off independently. Everything else (which tags map to which
  * blocks, the core/html fallback) is hardcoded rather than configurable, to
- * keep scope tight.
+ * keep scope tight. All user-facing copy rendered here is centralized in
+ * Strings.php, not written literally in this file - edit copy there.
  */
 class Settings
 {
@@ -87,8 +88,8 @@ class Settings
         // entry, so this addon reads as part of Postie's settings surface.
         add_submenu_page(
             'postie-settings',
-            __('Postie Blocks', 'postie-blocks-addon'),
-            __('Postie Blocks', 'postie-blocks-addon'),
+            Strings::get('menu_title'),
+            Strings::get('menu_title'),
             'manage_options',
             'postie-blocks',
             [$this, 'renderPage']
@@ -142,53 +143,51 @@ class Settings
         $htmlEnabled     = self::isHtmlEnabled();
         ?>
         <div class="wrap postie-blocks-settings-wrap">
-            <h1><?php esc_html_e('Postie Blocks Addon', 'postie-blocks-addon'); ?></h1>
+            <h1><?php echo esc_html(Strings::get('page_heading')); ?></h1>
             <form method="post" action="options.php">
                 <?php settings_fields('postie_blocks_settings_group'); ?>
                 <div class="postie-blocks-card">
                     <div class="postie-blocks-subsection">
-                        <p class="postie-blocks-field-heading"><?php esc_html_e('Content Conversion', 'postie-blocks-addon'); ?></p>
+                        <p class="postie-blocks-field-heading"><?php echo esc_html(Strings::get('content_conversion_heading')); ?></p>
                         <label>
                             <input type="checkbox" name="postie_blocks_settings[markdown_enabled]" value="1" <?php checked($markdownEnabled); ?> />
-                            <?php esc_html_e('Parse Markdown syntax (#, **, etc.) in plain-text emails', 'postie-blocks-addon'); ?>
+                            <?php echo esc_html(Strings::get('markdown_toggle_label')); ?>
                         </label>
                         <p class="description">
-                            <?php esc_html_e('When off, Markdown syntax such as "# Heading" or "**bold**" is left as literal text instead of being parsed - including inside an explicit <md>...</md> block. Doesn\'t affect HTML-to-blocks normalization below.', 'postie-blocks-addon'); ?>
+                            <?php echo esc_html(Strings::get('markdown_toggle_desc')); ?>
                         </p>
                         <label>
                             <input type="checkbox" name="postie_blocks_settings[html_enabled]" value="1" <?php checked($htmlEnabled); ?> />
-                            <?php esc_html_e('Convert content into native Gutenberg blocks', 'postie-blocks-addon'); ?>
+                            <?php echo esc_html(Strings::get('html_toggle_label')); ?>
                         </label>
                         <p class="description">
-                            <?php esc_html_e('When off, this plugin does not add any <!-- wp:... --> block markup at all - Postie\'s own content (or Markdown-converted HTML, if Markdown parsing above is on) is saved as-is, opening as a single Classic/HTML block in the editor. Turn this off if you only want Markdown parsing without the block conversion.', 'postie-blocks-addon'); ?>
+                            <?php echo esc_html(Strings::get('html_toggle_desc')); ?>
                         </p>
                     </div>
                     <div class="postie-blocks-subsection">
-                        <p class="postie-blocks-field-heading"><?php esc_html_e('Recommended: Wrap Markdown in <md>...</md>', 'postie-blocks-addon'); ?></p>
+                        <p class="postie-blocks-field-heading"><?php echo esc_html(Strings::get('md_wrapper_heading')); ?></p>
                         <p class="description">
-                            <?php esc_html_e('Postie has several of its own content-processing features - collapsing single line breaks, stripping anything after a "---" line as a signature, pulling an inline "#subject#" out of the body - that all run before this plugin ever sees your email, and each can silently damage Markdown syntax that happens to resemble one of Postie\'s own conventions (see the two notes below for specifics). Wrapping the Markdown portion of an email in <md> and </md> tags shields it from all three at once, converting using your email\'s exact original line breaks. This is the single most reliable way to guarantee any Markdown email - especially one with a list, a "---" rule, or a heading as the very first line - converts correctly.', 'postie-blocks-addon'); ?>
+                            <?php echo esc_html(Strings::get('md_wrapper_desc')); ?>
                         </p>
                     </div>
                     <div class="postie-blocks-subsection">
-                        <p class="postie-blocks-field-heading"><?php esc_html_e('Known Conflict: "---" and Signature Stripping', 'postie-blocks-addon'); ?></p>
+                        <p class="postie-blocks-field-heading"><?php echo esc_html(Strings::get('conflict_signature_heading')); ?></p>
                         <p class="description">
                             <?php
                             printf(
-                                /* translators: %s: link to Postie's own settings page (its "Message" tab holds the "Signature Patterns" field). */
-                                esc_html__('Postie\'s own default settings treat a line containing only "---" as the start of an email signature and remove everything after it, before this plugin ever sees the content - Postie\'s "Signature Patterns" list, under %s (Message tab), includes "---" by default. Since Markdown commonly uses "---" on its own line as a horizontal rule, a Markdown email using that syntax will lose everything past it. Fixed by wrapping in <md>...</md> above. Alternatively, use "***" or "___" for a horizontal rule instead, or remove "---" from Postie\'s Signature Patterns list if you don\'t rely on automatic signature stripping.', 'postie-blocks-addon'),
-                                '<a href="' . esc_url(admin_url('admin.php?page=postie-settings')) . '">' . esc_html__("Postie's settings", 'postie-blocks-addon') . '</a>'
+                                esc_html(Strings::get('conflict_signature_desc')),
+                                '<a href="' . esc_url(admin_url('admin.php?page=postie-settings')) . '">' . esc_html(Strings::get('postie_settings_link_text')) . '</a>'
                             );
                             ?>
                         </p>
                     </div>
                     <div class="postie-blocks-subsection">
-                        <p class="postie-blocks-field-heading"><?php esc_html_e('Known Conflict: "#" and Allow Subject In Mail', 'postie-blocks-addon'); ?></p>
+                        <p class="postie-blocks-field-heading"><?php echo esc_html(Strings::get('conflict_subject_heading')); ?></p>
                         <p class="description">
                             <?php
                             printf(
-                                /* translators: %s: link to Postie's own settings page (its "Message" tab holds the "Allow Subject In Mail" field). */
-                                esc_html__('If Postie\'s "Allow Subject In Mail" setting is on (%s, Message tab) and the email body starts with "#", Postie treats everything up to the NEXT "#" anywhere in the body as the subject and strips it out of the content - intended for a deliberate "#subject#" marker on the first line, but a Markdown email starting with a "# Heading" (with a later "##"/"###" heading further down) gets its entire opening section pulled into the post title instead. Fixed by wrapping in <md>...</md> above, with the <md> tag itself as the very first thing in the body. Alternatively, turn off "Allow Subject In Mail" if you don\'t use that feature, or avoid starting the email body with a "#" heading as the very first character.', 'postie-blocks-addon'),
-                                '<a href="' . esc_url(admin_url('admin.php?page=postie-settings')) . '">' . esc_html__("Postie's settings", 'postie-blocks-addon') . '</a>'
+                                esc_html(Strings::get('conflict_subject_desc')),
+                                '<a href="' . esc_url(admin_url('admin.php?page=postie-settings')) . '">' . esc_html(Strings::get('postie_settings_link_text')) . '</a>'
                             );
                             ?>
                         </p>
