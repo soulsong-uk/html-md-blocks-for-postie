@@ -4,7 +4,7 @@ Tags: postie, email, markdown, gutenberg, blocks
 Requires at least: 6.2
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 0.1.8
+Stable tag: 0.1.9
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -46,6 +46,9 @@ Wrap the part of the email you want parsed as Markdown in `<md>` and `</md>` tag
 This is deliberate, not automatic: this plugin never guesses whether some arbitrary content "looks like" Markdown - only content inside an explicit `<md>...</md>` block is ever parsed as Markdown. Content outside the wrapper (or the whole email, if you don't use one) is treated as plain content. As a side benefit, content inside `<md>...</md>` is also fully shielded from Postie's own content-processing (its newline-collapsing, `---`-line signature stripping, and `#subject#` inline-subject extraction all run before this plugin ever sees the content, and could otherwise silently damage unwrapped Markdown syntax that happens to resemble one of those conventions) - using `<md>` sidesteps all of that automatically, with no workaround needed.
 
 == Changelog ==
+
+= 0.1.9 =
+* Fix: WordPress.WP.I18n.NonSingularStringLiteralText Plugin Check error - Strings::get() now looks up a plain array of pre-translated strings instead of passing a dynamic value into __(), since __()'s first argument must be a literal string for WordPress's translation tooling to find it
 
 = 0.1.8 =
 * Change: Markdown is now only ever parsed inside an explicit <md>...</md> block - the previous heuristic that guessed whether arbitrary content looked like Markdown has been removed entirely

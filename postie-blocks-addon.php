@@ -3,7 +3,7 @@
  * Plugin Name: Postie Blocks Addon
  * Plugin URI:  https://github.com/soulsong/postie-blocks-addon
  * Description: Addon for Postie that converts emailed content into native Gutenberg blocks (paragraphs, headings, images, lists, quotes) instead of Postie's default raw HTML output - with optional Markdown parsing for senders who want to style their email more expressively.
- * Version:     0.1.8
+ * Version:     0.1.9
  * Requires at least: 6.2
  * Requires PHP: 7.4
  * Requires Plugins: postie
@@ -14,7 +14,7 @@
 
 defined('ABSPATH') || exit;
 
-define('POSTIE_BLOCKS_VERSION', '0.1.8');
+define('POSTIE_BLOCKS_VERSION', '0.1.9');
 define('POSTIE_BLOCKS_PLUGIN_FILE', __FILE__);
 define('POSTIE_BLOCKS_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('POSTIE_BLOCKS_PLUGIN_URL', plugin_dir_url(__FILE__));
