@@ -1,10 +1,10 @@
-=== Postie Blocks Addon ===
+=== HTML and Markdown Blocks for Postie ===
 Contributors: James Harvey
 Tags: postie, email, markdown, gutenberg, blocks
 Requires at least: 6.2
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 0.1.9
+Stable tag: 0.1.10
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -16,7 +16,7 @@ This is an addon for the Postie plugin (email-to-post). It does nothing on its o
 
 By default, Postie saves emailed content as a flat HTML/text blob, so a post created from an email opens in the block editor as one big Classic/HTML block rather than proper paragraph/heading/image blocks - and a big blob is difficult to edit afterward. 
 
-Postie Blocks Addon converts that emailed content into real, individually-editable Gutenberg blocks before the post is saved with the ability to further format using markdown syntax within `<md>...</md>`.
+HTML and Markdown Blocks for Postie converts that emailed content into real, individually-editable Gutenberg blocks before the post is saved with the ability to further format using markdown syntax within `<md>...</md>`.
 
 * Rich HTML emails (Outlook/Gmail-style formatted mail) are normalized into blocks.
 * Markdown syntax (`#`/`##` headings, blank-line paragraphs, `**bold**`, `[links](url)`, `*`/`-` lists, `>` quotes) wrapped in an explicit `<md>...</md>` block is parsed into native blocks. See the FAQ below.
@@ -29,7 +29,7 @@ Postie Blocks Addon converts that emailed content into real, individually-editab
 
 1. Install and activate Postie first.
 2. Install and activate this plugin.
-3. Optionally visit Postie's settings > Postie Blocks to toggle Markdown parsing and/or Gutenberg block conversion independently (both on by default).
+3. Optionally visit Postie's settings > HTML & Markdown Blocks to toggle Markdown parsing and/or Gutenberg block conversion independently (both on by default).
 
 == Frequently Asked Questions ==
 
@@ -46,6 +46,9 @@ Wrap the part of the email you want parsed as Markdown in `<md>` and `</md>` tag
 This is deliberate, not automatic: this plugin never guesses whether some arbitrary content "looks like" Markdown - only content inside an explicit `<md>...</md>` block is ever parsed as Markdown. Content outside the wrapper (or the whole email, if you don't use one) is treated as plain content. As a side benefit, content inside `<md>...</md>` is also fully shielded from Postie's own content-processing (its newline-collapsing, `---`-line signature stripping, and `#subject#` inline-subject extraction all run before this plugin ever sees the content, and could otherwise silently damage unwrapped Markdown syntax that happens to resemble one of those conventions) - using `<md>` sidesteps all of that automatically, with no workaround needed.
 
 == Changelog ==
+
+= 0.1.10 =
+* Change: renamed from Postie Blocks Addon to HTML and Markdown Blocks for Postie - slug, namespace, constants, option name (with automatic migration), settings menu slug, and CSS classes all updated to match; no functional changes
 
 = 0.1.9 =
 * Fix: WordPress.WP.I18n.NonSingularStringLiteralText Plugin Check error - Strings::get() now looks up a plain array of pre-translated strings instead of passing a dynamic value into __(), since __()'s first argument must be a literal string for WordPress's translation tooling to find it

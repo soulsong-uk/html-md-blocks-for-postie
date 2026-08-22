@@ -1,6 +1,6 @@
 <?php
 
-namespace PostieBlocksAddon;
+namespace HtmlMdBlocksForPostie;
 
 defined('ABSPATH') || exit;
 
@@ -13,15 +13,22 @@ defined('ABSPATH') || exit;
  */
 class Settings
 {
-    private const OPTION = 'postie_blocks_settings';
+    private const OPTION = 'html_md_blocks_for_postie_settings';
 
     /**
-     * The plugin's original option name, from when it was named "Postie
-     * Markdown Blocks" (slug postie-md-plugin). migrateOldOption() carries
-     * a site's already-saved toggle state forward under the new name so
-     * the rename doesn't silently reset it to defaults.
+     * The plugin's most recent prior option name, from when it was named
+     * "Postie Blocks Addon" (slug postie-blocks-addon). migrateOldOption()
+     * carries a site's already-saved toggle state forward under the new
+     * name so the rename doesn't silently reset it to defaults.
      */
-    private const LEGACY_OPTION = 'postie_md_settings';
+    private const LEGACY_OPTION = 'postie_blocks_settings';
+
+    /**
+     * The plugin's original option name, one rename further back, from
+     * when it was named "Postie Markdown Blocks" (slug postie-md-plugin).
+     * Only consulted if LEGACY_OPTION itself is also missing.
+     */
+    private const LEGACY_OPTION_OLDEST = 'postie_md_settings';
 
     public static function isMarkdownEnabled(): bool
     {
@@ -68,6 +75,9 @@ class Settings
     {
         $old = get_option(self::LEGACY_OPTION, null);
         if (!is_array($old)) {
+            $old = get_option(self::LEGACY_OPTION_OLDEST, null);
+        }
+        if (!is_array($old)) {
             return null;
         }
         update_option(self::OPTION, $old);
@@ -91,14 +101,14 @@ class Settings
             Strings::get('menu_title'),
             Strings::get('menu_title'),
             'manage_options',
-            'postie-blocks',
+            'html-md-blocks-for-postie',
             [$this, 'renderPage']
         );
     }
 
     public function registerSetting(): void
     {
-        register_setting('postie_blocks_settings_group', self::OPTION, [
+        register_setting('html_md_blocks_for_postie_settings_group', self::OPTION, [
             'type' => 'array',
             'sanitize_callback' => [$this, 'sanitize'],
             'default' => ['markdown_enabled' => true, 'html_enabled' => true],
@@ -121,16 +131,17 @@ class Settings
     {
         // Checked via $_GET['page'] rather than the admin_enqueue_scripts
         // $hook_suffix argument - that suffix is derived from the parent
-        // menu's slug ("postie-settings_page_postie-blocks") which is
-        // easy to get subtly wrong; the page slug itself is a stable target.
-        if (!isset($_GET['page']) || $_GET['page'] !== 'postie-blocks') { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+        // menu's slug ("postie-settings_page_html-md-blocks-for-postie")
+        // which is easy to get subtly wrong; the page slug itself is a
+        // stable target.
+        if (!isset($_GET['page']) || $_GET['page'] !== 'html-md-blocks-for-postie') { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
             return;
         }
         wp_enqueue_style(
-            'postie-blocks-admin',
-            POSTIE_BLOCKS_PLUGIN_URL . 'assets/css/admin.css',
+            'html-md-blocks-for-postie-admin',
+            HTML_MD_BLOCKS_FOR_POSTIE_PLUGIN_URL . 'assets/css/admin.css',
             [],
-            POSTIE_BLOCKS_VERSION
+            HTML_MD_BLOCKS_FOR_POSTIE_VERSION
         );
     }
 
@@ -142,15 +153,15 @@ class Settings
         $markdownEnabled = self::isMarkdownEnabled();
         $htmlEnabled     = self::isHtmlEnabled();
         ?>
-        <div class="wrap postie-blocks-settings-wrap">
+        <div class="wrap html-md-blocks-for-postie-settings-wrap">
             <h1><?php echo esc_html(Strings::get('page_heading')); ?></h1>
             <form method="post" action="options.php">
-                <?php settings_fields('postie_blocks_settings_group'); ?>
-                <div class="postie-blocks-card">
-                    <div class="postie-blocks-subsection">
-                        <p class="postie-blocks-field-heading"><?php echo esc_html(Strings::get('content_conversion_heading')); ?></p>
+                <?php settings_fields('html_md_blocks_for_postie_settings_group'); ?>
+                <div class="html-md-blocks-for-postie-card">
+                    <div class="html-md-blocks-for-postie-subsection">
+                        <p class="html-md-blocks-for-postie-field-heading"><?php echo esc_html(Strings::get('content_conversion_heading')); ?></p>
                         <label>
-                            <input type="checkbox" name="postie_blocks_settings[markdown_enabled]" value="1" <?php checked($markdownEnabled); ?> />
+                            <input type="checkbox" name="html_md_blocks_for_postie_settings[markdown_enabled]" value="1" <?php checked($markdownEnabled); ?> />
                             <?php echo esc_html(Strings::get('markdown_toggle_label')); ?>
                         </label>
                         <p class="description">
@@ -162,9 +173,9 @@ class Settings
                         <p class="description">
                             <strong><?php echo esc_html(Strings::get('markdown_toggle_example_label')); ?></strong>
                         </p>
-                        <pre class="postie-blocks-example"><code><?php echo esc_html(Strings::get('markdown_toggle_example')); ?></code></pre>
+                        <pre class="html-md-blocks-for-postie-example"><code><?php echo esc_html(Strings::get('markdown_toggle_example')); ?></code></pre>
                         <label>
-                            <input type="checkbox" name="postie_blocks_settings[html_enabled]" value="1" <?php checked($htmlEnabled); ?> />
+                            <input type="checkbox" name="html_md_blocks_for_postie_settings[html_enabled]" value="1" <?php checked($htmlEnabled); ?> />
                             <?php echo esc_html(Strings::get('html_toggle_label')); ?>
                         </label>
                         <p class="description">

@@ -1,6 +1,6 @@
 <?php
 
-namespace PostieBlocksAddon;
+namespace HtmlMdBlocksForPostie;
 
 defined('ABSPATH') || exit;
 
@@ -32,23 +32,23 @@ class Strings
     private static function all(): array
     {
         return [
-            // Bootstrap (postie-blocks-addon.php) - missing-dependency admin notice
-            'requires_postie_notice' => __('Postie Blocks Addon requires the Postie plugin to be installed and active - it has no effect on its own.', 'postie-blocks-addon'),
+            // Bootstrap (html-md-blocks-for-postie.php) - missing-dependency admin notice
+            'requires_postie_notice' => __('HTML and Markdown Blocks for Postie requires the Postie plugin to be installed and active - it has no effect on its own.', 'html-md-blocks-for-postie'),
 
             // Settings page (src/Settings.php) - menu + page heading
-            'menu_title'   => __('Postie Blocks', 'postie-blocks-addon'),
-            'page_heading' => __('Postie Blocks Addon', 'postie-blocks-addon'),
+            'menu_title'   => __('HTML & Markdown Blocks', 'html-md-blocks-for-postie'),
+            'page_heading' => __('HTML and Markdown Blocks for Postie', 'html-md-blocks-for-postie'),
 
             // Settings page - Content Conversion subsection
-            'content_conversion_heading'    => __('Content Conversion', 'postie-blocks-addon'),
-            'markdown_toggle_label'         => __('Convert Markdown to Gutenberg Blocks', 'postie-blocks-addon'),
-            'markdown_toggle_desc'          => __('Wrap any part of your email in <md> and </md> tags to turn it into nicely styled content — headings, bold, italic, links, images, and lists all get formatted automatically.', 'postie-blocks-addon'),
-            'markdown_toggle_desc_outside'  => __('Anything outside the <md> tags stays as plain text, exactly as written.', 'postie-blocks-addon'),
-            'markdown_toggle_example_label' => __('Example:', 'postie-blocks-addon'),
+            'content_conversion_heading'    => __('Content Conversion', 'html-md-blocks-for-postie'),
+            'markdown_toggle_label'         => __('Convert Markdown to Gutenberg Blocks', 'html-md-blocks-for-postie'),
+            'markdown_toggle_desc'          => __('Wrap any part of your email in <md> and </md> tags to turn it into nicely styled content — headings, bold, italic, links, images, and lists all get formatted automatically.', 'html-md-blocks-for-postie'),
+            'markdown_toggle_desc_outside'  => __('Anything outside the <md> tags stays as plain text, exactly as written.', 'html-md-blocks-for-postie'),
+            'markdown_toggle_example_label' => __('Example:', 'html-md-blocks-for-postie'),
             /* translators: this is a literal <md> Markdown syntax example shown verbatim in a <pre> block, not prose - kept translatable in case a locale wants to show a translated sample. */
-            'markdown_toggle_example'       => __("<md>\n# Welcome!\nThis is **bold** and this is *italic*.\n- Item one\n- Item two\n</md>", 'postie-blocks-addon'),
-            'html_toggle_label' => __('Convert content into native Gutenberg blocks', 'postie-blocks-addon'),
-            'html_toggle_desc'  => __('Wraps the finished content - including any Markdown conversion above - in real Gutenberg block markup (paragraphs, headings, images, lists, quotes), so the post opens as separate, individually editable blocks instead of one Classic/HTML block.', 'postie-blocks-addon'),
+            'markdown_toggle_example'       => __("<md>\n# Welcome!\nThis is **bold** and this is *italic*.\n- Item one\n- Item two\n</md>", 'html-md-blocks-for-postie'),
+            'html_toggle_label' => __('Convert content into native Gutenberg blocks', 'html-md-blocks-for-postie'),
+            'html_toggle_desc'  => __('Wraps the finished content - including any Markdown conversion above - in real Gutenberg block markup (paragraphs, headings, images, lists, quotes), so the post opens as separate, individually editable blocks instead of one Classic/HTML block.', 'html-md-blocks-for-postie'),
         ];
     }
 }

@@ -1,6 +1,6 @@
 <?php
 
-namespace PostieBlocksAddon;
+namespace HtmlMdBlocksForPostie;
 
 defined('ABSPATH') || exit;
 
@@ -149,7 +149,7 @@ class MarkdownConverter
         }
 
         if (!class_exists('Parsedown')) {
-            $file = POSTIE_BLOCKS_PLUGIN_DIR . 'vendor/Parsedown.php';
+            $file = HTML_MD_BLOCKS_FOR_POSTIE_PLUGIN_DIR . 'vendor/Parsedown.php';
             if (file_exists($file)) {
                 require_once $file;
             }

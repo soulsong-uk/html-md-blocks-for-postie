@@ -1,6 +1,6 @@
 <?php
 
-namespace PostieBlocksAddon;
+namespace HtmlMdBlocksForPostie;
 
 defined('ABSPATH') || exit;
 

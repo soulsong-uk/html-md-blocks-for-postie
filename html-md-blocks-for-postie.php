@@ -1,35 +1,36 @@
 <?php
 /**
- * Plugin Name: Postie Blocks Addon
- * Plugin URI:  https://github.com/soulsong/postie-blocks-addon
+ * Plugin Name: HTML and Markdown Blocks for Postie
+ * Plugin URI:  https://github.com/jainanda/html-md-blocks-for-postie
  * Description: Addon for Postie that converts emailed content into native Gutenberg blocks (paragraphs, headings, images, lists, quotes) instead of Postie's default raw HTML output - with optional Markdown parsing for senders who want to style their email more expressively.
- * Version:     0.1.9
+ * Version:     0.1.10
  * Requires at least: 6.2
  * Requires PHP: 7.4
  * Requires Plugins: postie
  * Author:      James Harvey
  * License:     GPLv2 or later
- * Text Domain: postie-blocks-addon
+ * Text Domain: html-md-blocks-for-postie
  */
 
 defined('ABSPATH') || exit;
 
-define('POSTIE_BLOCKS_VERSION', '0.1.9');
-define('POSTIE_BLOCKS_PLUGIN_FILE', __FILE__);
-define('POSTIE_BLOCKS_PLUGIN_DIR', plugin_dir_path(__FILE__));
-define('POSTIE_BLOCKS_PLUGIN_URL', plugin_dir_url(__FILE__));
+define('HTML_MD_BLOCKS_FOR_POSTIE_VERSION', '0.1.10');
+define('HTML_MD_BLOCKS_FOR_POSTIE_PLUGIN_FILE', __FILE__);
+define('HTML_MD_BLOCKS_FOR_POSTIE_PLUGIN_DIR', plugin_dir_path(__FILE__));
+define('HTML_MD_BLOCKS_FOR_POSTIE_PLUGIN_URL', plugin_dir_url(__FILE__));
 
 /**
- * PSR-4 autoloader for the PostieBlocksAddon\ namespace (source lives under
- * src/, no Composer/build step - matches the workspace's other plugins).
+ * PSR-4 autoloader for the HtmlMdBlocksForPostie\ namespace (source lives
+ * under src/, no Composer/build step - matches the workspace's other
+ * plugins).
  */
 spl_autoload_register(function (string $class): void {
-    $prefix = 'PostieBlocksAddon\\';
+    $prefix = 'HtmlMdBlocksForPostie\\';
     if (strncmp($prefix, $class, strlen($prefix)) !== 0) {
         return;
     }
     $relative = str_replace('\\', DIRECTORY_SEPARATOR, substr($class, strlen($prefix)));
-    $file     = POSTIE_BLOCKS_PLUGIN_DIR . 'src' . DIRECTORY_SEPARATOR . $relative . '.php';
+    $file     = HTML_MD_BLOCKS_FOR_POSTIE_PLUGIN_DIR . 'src' . DIRECTORY_SEPARATOR . $relative . '.php';
     if (file_exists($file)) {
         require $file;
     }
@@ -49,11 +50,11 @@ add_action('plugins_loaded', function (): void {
             }
             printf(
                 '<div class="notice notice-error"><p>%s</p></div>',
-                esc_html(\PostieBlocksAddon\Strings::get('requires_postie_notice'))
+                esc_html(\HtmlMdBlocksForPostie\Strings::get('requires_postie_notice'))
             );
         });
         return;
     }
 
-    \PostieBlocksAddon\Plugin::instance()->boot();
+    \HtmlMdBlocksForPostie\Plugin::instance()->boot();
 }, 20);
