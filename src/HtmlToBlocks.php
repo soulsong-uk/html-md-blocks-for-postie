@@ -143,7 +143,7 @@ class HtmlToBlocks
             }
 
             $outer = trim((string) $node->outertext);
-            return $outer === '' ? [] : [$this->paragraphBlock($outer)];
+            return $this->hasVisibleText($outer) ? [$this->paragraphBlock($outer)] : [];
         }
 
         // A bare <span> wrapping nothing but an image - e.g. Word's own
@@ -344,13 +344,18 @@ class HtmlToBlocks
      * one) into its own core/image block, flushing accumulated inline
      * text/formatting around it into core/paragraph blocks. A paragraph
      * containing only an image (no surrounding text) yields just the image
-     * block, no empty paragraph.
+     * block, no empty paragraph. Also splits out any genuinely block-level
+     * element (a heading, another paragraph, a list, ...) that ended up as
+     * a direct child of this <p> - see the isBlockLevelTag() branch below
+     * for why that happens and why it can't just be appended as text.
      *
      * $align (if any) is the wrapping <p>'s own detected alignment -
-     * propagated to every block split out of it (any paragraph fragments,
-     * and the image, if any), since a sender who center-aligned the whole
-     * paragraph almost always means everything in it, and there's no
-     * unambiguous way to apply alignment to only part of a split paragraph.
+     * propagated to every text/image block split out of it (a nested
+     * block-level element handles its own alignment independently via the
+     * normal top-level dispatch, since it has its own source attributes),
+     * since a sender who center-aligned the whole paragraph almost always
+     * means everything in it, and there's no unambiguous way to apply
+     * alignment to only part of a split paragraph.
      *
      * @return array<int,array<string,mixed>>
      */
@@ -369,25 +374,51 @@ class HtmlToBlocks
             $imgNode    = $this->soleImageDescendant($child);
             $anchorNode = ($childTag === 'a' && $imgNode !== null) ? $child : null;
 
-            if ($imgNode === null) {
-                $buffer .= (string) $child->outertext;
+            if ($imgNode !== null) {
+                $pending = trim($buffer);
+                if ($this->hasVisibleText($pending)) {
+                    $blocks[] = $this->paragraphBlock($pending, $align);
+                }
+                $buffer = '';
+
+                $imageBlock = $this->imageBlock($imgNode, $anchorNode, $registry, $align);
+                if ($imageBlock) {
+                    $blocks[] = $imageBlock;
+                }
                 continue;
             }
 
-            $pending = trim($buffer);
-            if ($pending !== '') {
-                $blocks[] = $this->paragraphBlock($pending, $align);
-            }
-            $buffer = '';
+            if ($this->isBlockLevelTag($childTag)) {
+                // Malformed mail-client HTML (Word's HTML export in
+                // particular) can leave a genuine block-level element (a
+                // heading, another paragraph, ...) as a direct child of
+                // this <p> - simple_html_dom only implicitly closes a <p>
+                // when it hits a NESTED <p>, matching real browser
+                // behaviour for that one specific case, but not for other
+                // block-level start tags the way a real browser's full
+                // implied-end-tag rules would. Naively appending such a
+                // child's raw outerHTML into this paragraph's buffer would
+                // produce an invalid block - a <h1> literally nested inside
+                // a <p> - that Gutenberg's editor flags as "unexpected or
+                // invalid content". Dispatch it through the normal
+                // top-level conversion instead, so it becomes its own
+                // proper block (and, for a heading, picks up its own
+                // alignment from its own attributes independently).
+                $pending = trim($buffer);
+                if ($this->hasVisibleText($pending)) {
+                    $blocks[] = $this->paragraphBlock($pending, $align);
+                }
+                $buffer = '';
 
-            $imageBlock = $this->imageBlock($imgNode, $anchorNode, $registry, $align);
-            if ($imageBlock) {
-                $blocks[] = $imageBlock;
+                $blocks = array_merge($blocks, $this->nodeToBlocks($child, $registry));
+                continue;
             }
+
+            $buffer .= (string) $child->outertext;
         }
 
         $pending = trim($buffer);
-        if ($pending !== '') {
+        if ($this->hasVisibleText($pending)) {
             $blocks[] = $this->paragraphBlock($pending, $align);
         }
 
@@ -426,6 +457,39 @@ class HtmlToBlocks
     private function isOrphanedTagFragment(string $text): bool
     {
         return (bool) preg_match('/^<\/?[a-zA-Z][a-zA-Z0-9]*(?:\s[^<>]*)?\/?>$/', $text);
+    }
+
+    /**
+     * True if $html would render any visible text once its tags are
+     * stripped - used instead of a plain non-empty check before emitting a
+     * core/paragraph, so leftover raw markup with no visible content of its
+     * own (Word's <meta> tags being the real case that surfaced this -
+     * after the isBlockLevelTag() split pulls a heading out of a paragraph
+     * that also wrapped some <meta> tags, those meta tags were the only
+     * thing left in the buffer, producing a paragraph block that renders as
+     * a pointless blank line) doesn't produce an empty-looking block.
+     * Purely structural (does this content have visible text at all), not
+     * a guess about what the content "is" - a real HTML entity like
+     * "&nbsp;" isn't touched by wp_strip_all_tags() and still counts as
+     * visible, so a genuine spacer the sender typed is left alone; only
+     * markup with literally nothing but tags/whitespace is dropped.
+     */
+    private function hasVisibleText(string $html): bool
+    {
+        return trim(wp_strip_all_tags($html)) !== '';
+    }
+
+    /**
+     * True for a tag that has its own block-level meaning elsewhere in
+     * nodeToBlocks() and so must never be flattened into a paragraph's raw
+     * inner HTML if it ends up as a direct child of a <p> - see the
+     * isBlockLevelTag() branch in splitParagraphContent() for why that can
+     * happen despite being invalid HTML.
+     */
+    private function isBlockLevelTag(string $tag): bool
+    {
+        return (bool) preg_match('/^h[1-6]$/', $tag)
+            || in_array($tag, ['p', 'div', 'ul', 'ol', 'blockquote', 'hr'], true);
     }
 
     /**

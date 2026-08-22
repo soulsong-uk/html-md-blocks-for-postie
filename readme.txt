@@ -4,7 +4,7 @@ Tags: postie, email, markdown, gutenberg, blocks
 Requires at least: 6.2
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 0.1.11
+Stable tag: 0.1.12
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -46,6 +46,10 @@ Wrap the part of the email you want parsed as Markdown in `<md>` and `</md>` tag
 This is deliberate, not automatic: this plugin never guesses whether some arbitrary content "looks like" Markdown - only content inside an explicit `<md>...</md>` block is ever parsed as Markdown. Content outside the wrapper (or the whole email, if you don't use one) is treated as plain content. As a side benefit, content inside `<md>...</md>` is also fully shielded from Postie's own content-processing (its newline-collapsing, `---`-line signature stripping, and `#subject#` inline-subject extraction all run before this plugin ever sees the content, and could otherwise silently damage unwrapped Markdown syntax that happens to resemble one of those conventions) - using `<md>` sidesteps all of that automatically, with no workaround needed.
 
 == Changelog ==
+
+= 0.1.12 =
+* Fix: a block-level element (e.g. a heading) malformed mail-client HTML left nested inside a paragraph no longer produces an invalid block - it now converts to its own proper block instead of being flattened into the paragraph's raw HTML
+* Fix: leftover non-visible markup (e.g. Word's <meta> tags) no longer produces a pointless blank paragraph block at the top of the post
 
 = 0.1.11 =
 * Fix: mail-client HTML (e.g. Word paste) wrapped in a <div> no longer collapses into a single opaque HTML block instead of converting to real blocks
