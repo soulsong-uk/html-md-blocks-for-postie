@@ -4,7 +4,7 @@ Tags: postie, email, markdown, gutenberg, blocks
 Requires at least: 6.2
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 0.1.10
+Stable tag: 0.1.11
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -46,6 +46,12 @@ Wrap the part of the email you want parsed as Markdown in `<md>` and `</md>` tag
 This is deliberate, not automatic: this plugin never guesses whether some arbitrary content "looks like" Markdown - only content inside an explicit `<md>...</md>` block is ever parsed as Markdown. Content outside the wrapper (or the whole email, if you don't use one) is treated as plain content. As a side benefit, content inside `<md>...</md>` is also fully shielded from Postie's own content-processing (its newline-collapsing, `---`-line signature stripping, and `#subject#` inline-subject extraction all run before this plugin ever sees the content, and could otherwise silently damage unwrapped Markdown syntax that happens to resemble one of those conventions) - using `<md>` sidesteps all of that automatically, with no workaround needed.
 
 == Changelog ==
+
+= 0.1.11 =
+* Fix: mail-client HTML (e.g. Word paste) wrapped in a <div> no longer collapses into a single opaque HTML block instead of converting to real blocks
+* Fix: an inline image wrapped in a no-op <span> (e.g. Word's mso-no-proof span) now becomes its own image block instead of being lost inside a paragraph
+* New: preserve paragraph/heading text alignment and image alignment (left/center/right) from the source HTML
+* Fix: converted heading blocks now include the wp-block-heading class Gutenberg expects
 
 = 0.1.10 =
 * Change: renamed from Postie Blocks Addon to HTML and Markdown Blocks for Postie - slug, namespace, constants, option name (with automatic migration), settings menu slug, and CSS classes all updated to match; no functional changes

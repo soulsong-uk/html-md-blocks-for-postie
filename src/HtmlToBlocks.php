@@ -17,7 +17,12 @@ defined('ABSPATH') || exit;
  * paragraph/image/list inside a quote convert the same as at the top
  * level). Anything else (code, tables, leftover styled markup from HTML
  * mail clients) falls back to a core/html block so no content is ever
- * silently dropped.
+ * silently dropped. Paragraph/heading/image alignment (from a source
+ * "align" attribute or an inline "text-align" style - see detectAlign())
+ * carries through onto the matching block using whichever attrs shape this
+ * WP version's own Gutenberg actually expects for each - see
+ * textAlignAttrs() and imageBlock()'s own align handling for the two
+ * different conventions involved.
  *
  * Uses Postie's own bundled simple_html_dom parser (via $g_postie->load_html())
  * rather than adding a second vendored dependency or requiring ext-dom -
@@ -90,7 +95,10 @@ class HtmlToBlocks
 
         if ($node->nodetype === HDOM_TYPE_TEXT) {
             $text = trim((string) $node->outertext);
-            return $text === '' ? [] : [$this->paragraphBlock($text)];
+            if ($text === '' || $this->isOrphanedTagFragment($text)) {
+                return [];
+            }
+            return [$this->paragraphBlock($text)];
         }
 
         if ($node->nodetype !== HDOM_TYPE_ELEMENT) {
@@ -109,7 +117,7 @@ class HtmlToBlocks
 
         if (preg_match('/^h([1-6])$/', $tag, $m)) {
             $inner = trim((string) $node->innertext);
-            return $inner === '' ? [] : [$this->headingBlock($inner, (int) $m[1])];
+            return $inner === '' ? [] : [$this->headingBlock($inner, (int) $m[1], $this->detectAlign($node))];
         }
 
         if ($tag === 'p') {
@@ -119,7 +127,7 @@ class HtmlToBlocks
             // so Parsedown keeps it as inline content of the same <p>) would
             // otherwise get baked into the paragraph block's HTML instead of
             // becoming its own core/image block. Split around any images.
-            return $this->splitParagraphContent($node, $registry);
+            return $this->splitParagraphContent($node, $registry, $this->detectAlign($node));
         }
 
         if ($tag === 'img') {
@@ -128,22 +136,27 @@ class HtmlToBlocks
         }
 
         if ($tag === 'a') {
-            $imgChildren = array_values(array_filter(
-                $this->childNodes($node),
-                static function ($child) {
-                    return isset($child->nodetype) && $child->nodetype === HDOM_TYPE_ELEMENT
-                        && strtolower((string) $child->tag) === 'img';
-                }
-            ));
-            $textOnly = trim(wp_strip_all_tags((string) $node->innertext));
-
-            if (count($imgChildren) === 1 && $textOnly === '') {
-                $block = $this->imageBlock($imgChildren[0], $node, $registry);
+            $img = $this->soleImageDescendant($node);
+            if ($img !== null) {
+                $block = $this->imageBlock($img, $node, $registry, $this->detectAlign($node));
                 return $block ? [$block] : [];
             }
 
             $outer = trim((string) $node->outertext);
             return $outer === '' ? [] : [$this->paragraphBlock($outer)];
+        }
+
+        // A bare <span> wrapping nothing but an image - e.g. Word's own
+        // <span style="mso-no-proof:yes"><img .../></span> around an inline
+        // pasted image - is content-less itself, so unwrap it to the image
+        // the same way a <div>/<a> wrapper does. A span with any real text
+        // of its own falls through to the generic fallback below instead.
+        if ($tag === 'span') {
+            $img = $this->soleImageDescendant($node);
+            if ($img !== null) {
+                $block = $this->imageBlock($img, null, $registry, $this->detectAlign($node));
+                return $block ? [$block] : [];
+            }
         }
 
         if ($tag === 'ul' || $tag === 'ol') {
@@ -156,13 +169,20 @@ class HtmlToBlocks
             return $block ? [$block] : [];
         }
 
-        // Transparent containers - e.g. Postie's own <div class="postie-attachments">
-        // wrapper around attachment templates - have no meaningful text of
-        // their own, so recurse into their children instead of collapsing
-        // the whole thing into one opaque HTML block. This is what lets
-        // each emailed image inside that wrapper become its own proper
-        // core/image block.
-        if ($tag === 'div' && $this->isTransparentContainer($node)) {
+        // Divs have no block-level meaning of their own in Gutenberg terms -
+        // e.g. Postie's own <div class="postie-attachments"> wrapper around
+        // attachment templates, or the outer <div> a mail client (Word,
+        // Gmail, Outlook) wraps its whole HTML export in - so always recurse
+        // into a div's children instead of collapsing the whole thing into
+        // one opaque HTML block. Any loose/free text directly inside a div
+        // is still handled correctly by the ordinary TEXT-node branch above
+        // (it becomes its own paragraph), so there's no need to gate this on
+        // "does the div have its own free text" first - and that gate used
+        // to cause a real bug: a stray orphaned closing tag left behind by
+        // malformed mail-client HTML (see isOrphanedTagFragment()) counted
+        // as "real text", which made the whole div bail out to one giant
+        // core/html block instead of converting at all.
+        if ($tag === 'div') {
             $blocks = [];
             foreach ($this->childNodes($node) as $child) {
                 $blocks = array_merge($blocks, $this->nodeToBlocks($child, $registry));
@@ -319,14 +339,22 @@ class HtmlToBlocks
 
     /**
      * Walks a <p>'s direct children and splits out any embedded image (bare
-     * <img>, or an <a> wrapping nothing but a single <img>) into its own
-     * core/image block, flushing accumulated inline text/formatting around
-     * it into core/paragraph blocks. A paragraph containing only an image
-     * (no surrounding text) yields just the image block, no empty paragraph.
+     * <img>, an <a> wrapping nothing but a single <img>, or a no-op <span>
+     * wrapper - e.g. Word's own <span style="mso-no-proof:yes"> - around
+     * one) into its own core/image block, flushing accumulated inline
+     * text/formatting around it into core/paragraph blocks. A paragraph
+     * containing only an image (no surrounding text) yields just the image
+     * block, no empty paragraph.
+     *
+     * $align (if any) is the wrapping <p>'s own detected alignment -
+     * propagated to every block split out of it (any paragraph fragments,
+     * and the image, if any), since a sender who center-aligned the whole
+     * paragraph almost always means everything in it, and there's no
+     * unambiguous way to apply alignment to only part of a split paragraph.
      *
      * @return array<int,array<string,mixed>>
      */
-    private function splitParagraphContent($node, AttachmentRegistry $registry): array
+    private function splitParagraphContent($node, AttachmentRegistry $registry, ?string $align = null): array
     {
         $blocks = [];
         $buffer = '';
@@ -338,25 +366,8 @@ class HtmlToBlocks
             }
 
             $childTag   = strtolower((string) $child->tag);
-            $imgNode    = null;
-            $anchorNode = null;
-
-            if ($childTag === 'img') {
-                $imgNode = $child;
-            } elseif ($childTag === 'a') {
-                $imgChildren = array_values(array_filter(
-                    $this->childNodes($child),
-                    static function ($c) {
-                        return isset($c->nodetype) && $c->nodetype === HDOM_TYPE_ELEMENT
-                            && strtolower((string) $c->tag) === 'img';
-                    }
-                ));
-                $textOnly = trim(wp_strip_all_tags((string) $child->innertext));
-                if (count($imgChildren) === 1 && $textOnly === '') {
-                    $imgNode    = $imgChildren[0];
-                    $anchorNode = $child;
-                }
-            }
+            $imgNode    = $this->soleImageDescendant($child);
+            $anchorNode = ($childTag === 'a' && $imgNode !== null) ? $child : null;
 
             if ($imgNode === null) {
                 $buffer .= (string) $child->outertext;
@@ -365,11 +376,11 @@ class HtmlToBlocks
 
             $pending = trim($buffer);
             if ($pending !== '') {
-                $blocks[] = $this->paragraphBlock($pending);
+                $blocks[] = $this->paragraphBlock($pending, $align);
             }
             $buffer = '';
 
-            $imageBlock = $this->imageBlock($imgNode, $anchorNode, $registry);
+            $imageBlock = $this->imageBlock($imgNode, $anchorNode, $registry, $align);
             if ($imageBlock) {
                 $blocks[] = $imageBlock;
             }
@@ -377,7 +388,7 @@ class HtmlToBlocks
 
         $pending = trim($buffer);
         if ($pending !== '') {
-            $blocks[] = $this->paragraphBlock($pending);
+            $blocks[] = $this->paragraphBlock($pending, $align);
         }
 
         return $blocks;
@@ -398,15 +409,91 @@ class HtmlToBlocks
         ];
     }
 
-    private function isTransparentContainer($node): bool
+    /**
+     * True for a text node that is nothing but a single bare tag, e.g.
+     * "</p>" or "<br>" - never real content. simple_html_dom falls back to
+     * emitting a closing tag as a literal text node when it can't match it
+     * to an open element on its stack; this happens routinely with Word's
+     * HTML export, where an outer wrapper <p> gets implicitly closed early
+     * by a nested <p class="MsoNormal">, leaving the wrapper's own closing
+     * </p> tag - further down the source - with nothing left to close. A
+     * sender who genuinely wanted to show literal tag syntax as visible
+     * text would have it HTML-entity-escaped (&lt;p&gt;) in the source,
+     * which decodes to plain characters and never round-trips as an actual
+     * unmatched tag - so this is safe to drop rather than emit as a junk
+     * paragraph.
+     */
+    private function isOrphanedTagFragment(string $text): bool
     {
-        foreach ($this->childNodes($node) as $child) {
-            if (isset($child->nodetype) && $child->nodetype === HDOM_TYPE_TEXT
-                && trim((string) $child->outertext) !== '') {
-                return false;
-            }
+        return (bool) preg_match('/^<\/?[a-zA-Z][a-zA-Z0-9]*(?:\s[^<>]*)?\/?>$/', $text);
+    }
+
+    /**
+     * Reads left/center/right alignment off $node's own "style" (a
+     * "text-align:" declaration) or, failing that, its legacy "align"
+     * attribute - both are how mail clients (Word/Outlook HTML export in
+     * particular) express alignment, since Markdown itself has no
+     * alignment concept and this only ever applies to genuinely-HTML
+     * content. "style" wins when both are present, matching normal CSS
+     * cascade. Anything other than left/center/right (notably "justify",
+     * which core/paragraph and core/heading don't support) is treated as
+     * no alignment rather than passed through as an unsupported value.
+     */
+    private function detectAlign($node): ?string
+    {
+        if (!isset($node->attr) || !is_array($node->attr)) {
+            return null;
         }
-        return true;
+
+        $style = (string) ($node->attr['style'] ?? '');
+        if (preg_match('/text-align\s*:\s*(left|center|right)/i', $style, $m)) {
+            return strtolower($m[1]);
+        }
+
+        $align = strtolower(trim((string) ($node->attr['align'] ?? '')));
+        return in_array($align, ['left', 'center', 'right'], true) ? $align : null;
+    }
+
+    /**
+     * Finds the single <img> that $node either is, or wraps through one or
+     * more no-op <span>/<a> layers with no text content of their own -
+     * e.g. Word's <span style="mso-no-proof:yes"><img/></span>, or that
+     * span additionally wrapped in a link. Returns null if $node contains
+     * any real text, more than one element child, or isn't an img/span/a at
+     * all - i.e. if unwrapping it would lose or misrepresent real content.
+     *
+     * @return object|null
+     */
+    private function soleImageDescendant($node)
+    {
+        if (!isset($node->nodetype) || $node->nodetype !== HDOM_TYPE_ELEMENT) {
+            return null;
+        }
+
+        $tag = strtolower((string) $node->tag);
+        if ($tag === 'img') {
+            return $node;
+        }
+        if ($tag !== 'span' && $tag !== 'a') {
+            return null;
+        }
+
+        $elementChildren = [];
+        foreach ($this->childNodes($node) as $child) {
+            if (isset($child->nodetype) && $child->nodetype === HDOM_TYPE_TEXT) {
+                if (trim((string) $child->outertext) !== '') {
+                    return null;
+                }
+                continue;
+            }
+            $elementChildren[] = $child;
+        }
+
+        if (count($elementChildren) !== 1) {
+            return null;
+        }
+
+        return $this->soleImageDescendant($elementChildren[0]);
     }
 
     /**
@@ -428,12 +515,13 @@ class HtmlToBlocks
     /**
      * @return array<string,mixed>
      */
-    private function paragraphBlock(string $innerHtml): array
+    private function paragraphBlock(string $innerHtml, ?string $align = null): array
     {
-        $html = '<p>' . $innerHtml . '</p>';
+        $class = $align !== null ? ' class="has-text-align-' . $align . '"' : '';
+        $html  = '<p' . $class . '>' . $innerHtml . '</p>';
         return [
             'blockName'    => 'core/paragraph',
-            'attrs'        => [],
+            'attrs'        => $this->textAlignAttrs($align),
             'innerBlocks'  => [],
             'innerHTML'    => $html,
             'innerContent' => [$html],
@@ -443,11 +531,25 @@ class HtmlToBlocks
     /**
      * @return array<string,mixed>
      */
-    private function headingBlock(string $innerHtml, int $level): array
+    private function headingBlock(string $innerHtml, int $level, ?string $align = null): array
     {
         $level = max(1, min(6, $level));
         $attrs = $level !== 2 ? ['level' => $level] : [];
-        $html  = "<h{$level}>{$innerHtml}</h{$level}>";
+        $attrs = array_merge($attrs, $this->textAlignAttrs($align));
+
+        // "wp-block-heading" is present on every real Gutenberg heading
+        // regardless of alignment - confirmed live (an unaligned heading
+        // still saved with this class) - unlike core/paragraph, which gets
+        // no base class of its own. Missing this class means the stored
+        // markup wouldn't match what core/heading's own save() would
+        // currently produce, which is exactly what makes the editor show
+        // "this block contains unexpected or invalid content".
+        $classes = ['wp-block-heading'];
+        if ($align !== null) {
+            $classes[] = 'has-text-align-' . $align;
+        }
+        $class = ' class="' . implode(' ', $classes) . '"';
+        $html  = "<h{$level}{$class}>{$innerHtml}</h{$level}>";
         return [
             'blockName'    => 'core/heading',
             'attrs'        => $attrs,
@@ -455,6 +557,22 @@ class HtmlToBlocks
             'innerHTML'    => $html,
             'innerContent' => [$html],
         ];
+    }
+
+    /**
+     * Gutenberg's text blocks (paragraph, heading, list, quote) store
+     * left/center/right text alignment under the nested style-engine attrs
+     * shape - confirmed live against a real WP install by centering a
+     * paragraph in the block editor and reading back the exact attrs it
+     * saved: {"style":{"typography":{"textAlign":"center"}}}, not a
+     * top-level "align" key (that shape is core/image's, a different,
+     * older convention - see imageBlock()).
+     *
+     * @return array<string,mixed>
+     */
+    private function textAlignAttrs(?string $align): array
+    {
+        return $align !== null ? ['style' => ['typography' => ['textAlign' => $align]]] : [];
     }
 
     /**
@@ -474,7 +592,7 @@ class HtmlToBlocks
     /**
      * @return array<string,mixed>|null
      */
-    private function imageBlock($imgNode, $anchorNode, AttachmentRegistry $registry): ?array
+    private function imageBlock($imgNode, $anchorNode, AttachmentRegistry $registry, ?string $align = null): ?array
     {
         $src = trim((string) ($imgNode->attr['src'] ?? ''));
         if ($src === '') {
@@ -513,6 +631,20 @@ class HtmlToBlocks
         if (preg_match('/\bsize-([a-z0-9_-]+)\b/i', $class, $sizeMatch)) {
             $blockAttrs['sizeSlug'] = $sizeMatch[1];
             $figureClasses[]        = 'size-' . $sizeMatch[1];
+        }
+
+        // core/image alignment - confirmed live against a real WP install
+        // by centering an image in the block editor: a top-level "align"
+        // attribute plus a bare "align{value}" class on the <figure> (no
+        // "has-text-align-" prefix - that's the paragraph/heading
+        // convention, a different mechanism - see textAlignAttrs()). Falls
+        // back to the <img> tag's own align/style if the caller (e.g. a
+        // standalone top-level <img> with no wrapping <p>/<a>/<span>) had
+        // no alignment context to pass in.
+        $align = $align ?? $this->detectAlign($imgNode);
+        if ($align !== null) {
+            $blockAttrs['align'] = $align;
+            $figureClasses[]     = 'align' . $align;
         }
 
         $imgHtml = '<img ' . $imgAttrs . '/>';
