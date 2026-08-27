@@ -1,10 +1,10 @@
-=== Soulsong HTML and Markdown Blocks for Postie ===
+=== Soulsong HTML and MD Blocks for Postie ===
 Contributors: soulsong-uk
 Tags: postie, email, markdown, gutenberg, blocks
 Requires at least: 6.2
 Tested up to: 7.1
 Requires PHP: 8.2
-Stable tag: 0.1.13
+Stable tag: 0.1.14
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -16,7 +16,7 @@ This is an addon for the Postie plugin (email-to-post). It does nothing on its o
 
 By default, Postie saves emailed content as a flat HTML/text blob, so a post created from an email opens in the block editor as one big Classic/HTML block rather than proper paragraph/heading/image blocks - and a big blob is difficult to edit afterward. 
 
-HTML and Markdown Blocks for Postie converts that emailed content into real, individually-editable Gutenberg blocks before the post is saved with the ability to further format using markdown syntax within `<md>...</md>`.
+Soulsong HTML and MD Blocks for Postie converts that emailed content into real, individually-editable Gutenberg blocks before the post is saved with the ability to further format using markdown syntax within `<md>...</md>`.
 
 * Rich HTML emails (Outlook/Gmail-style formatted mail) are normalized into blocks.
 * Markdown syntax (`#`/`##` headings, blank-line paragraphs, `**bold**`, `[links](url)`, `*`/`-` lists, `>` quotes) wrapped in an explicit `<md>...</md>` block is parsed into native blocks. See the FAQ below.
@@ -46,6 +46,9 @@ Wrap the part of the email you want parsed as Markdown in `<md>` and `</md>` tag
 This is deliberate, not automatic: this plugin never guesses whether some arbitrary content "looks like" Markdown - only content inside an explicit `<md>...</md>` block is ever parsed as Markdown. Content outside the wrapper (or the whole email, if you don't use one) is treated as plain content. As a side benefit, content inside `<md>...</md>` is also fully shielded from Postie's own content-processing (its newline-collapsing, `---`-line signature stripping, and `#subject#` inline-subject extraction all run before this plugin ever sees the content, and could otherwise silently damage unwrapped Markdown syntax that happens to resemble one of those conventions) - using `<md>` sidesteps all of that automatically, with no workaround needed.
 
 == Changelog ==
+
+= 0.1.14 =
+* Change: shorten display name to 'Soulsong HTML and MD Blocks for Postie' ('Markdown' -> 'MD'); display name only - no functional change.
 
 = 0.1.13 =
 * Change: rename to Soulsong HTML and Markdown Blocks for Postie (branding only - no functional change).
