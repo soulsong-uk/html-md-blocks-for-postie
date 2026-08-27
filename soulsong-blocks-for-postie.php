@@ -1,7 +1,7 @@
 <?php
 /**
- * Plugin Name: HTML and Markdown Blocks for Postie
- * Plugin URI:  https://github.com/soulsong-uk/html-md-blocks-for-postie
+ * Plugin Name: Soulsong HTML and Markdown Blocks for Postie
+ * Plugin URI:  https://github.com/soulsong-uk/soulsong-blocks-for-postie
  * Description: Addon for Postie that converts emailed content into native Gutenberg blocks (paragraphs, headings, images, lists, quotes) instead of Postie's default raw HTML output - with optional Markdown parsing for senders who want to style their email more expressively.
  * Version:     0.1.12
  * Requires at least: 6.2

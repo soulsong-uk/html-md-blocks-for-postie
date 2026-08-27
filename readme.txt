@@ -1,4 +1,4 @@
-=== HTML and Markdown Blocks for Postie ===
+=== Soulsong HTML and Markdown Blocks for Postie ===
 Contributors: soulsong-uk
 Tags: postie, email, markdown, gutenberg, blocks
 Requires at least: 6.2
