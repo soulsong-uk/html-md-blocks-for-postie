@@ -42,3 +42,26 @@
     line-height: 1.6;
     overflow-x: auto;
 }
+
+/* Dark-mode awareness (see workspace CLAUDE.md "Admin UI conventions"):
+   third-party WP dashboard dark-mode plugins add body.dark-mode and restyle
+   only WordPress core chrome, never a plugin's own custom panels - so the
+   bracketed-card markup here needs its own override. Deliberately minimal:
+   one body.dark-mode-scoped block, no :root tokens, no
+   @media (prefers-color-scheme). Card/subsection colours copied from
+   DeployGuard's admin.css; the -example code box is added here because its
+   near-white light fill is otherwise glaring on a dark page. */
+body.dark-mode .html-md-blocks-for-postie-card {
+    background: #2c3338;
+    color: #eceff1;
+}
+
+body.dark-mode .html-md-blocks-for-postie-subsection {
+    background: #32373c;
+    color: #eceff1;
+}
+
+body.dark-mode .html-md-blocks-for-postie-example {
+    background: #23282d;
+    border-color: #3c434a;
+}
