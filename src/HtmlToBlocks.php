@@ -22,7 +22,12 @@ defined('ABSPATH') || exit;
  * carries through onto the matching block using whichever attrs shape this
  * WP version's own Gutenberg actually expects for each - see
  * textAlignAttrs() and imageBlock()'s own align handling for the two
- * different conventions involved.
+ * different conventions involved. Alignment a mail client put on a
+ * *container* (a <div>/<center>, or an aligned <div> that only uses <br>
+ * for line breaks - Outlook/OWA do this instead of aligning each line) is
+ * inherited by every block produced from that container's descendants,
+ * since detectAlign() itself only ever inspects one element; an inner
+ * element that declares its own alignment still overrides the inherited one.
  *
  * Uses Postie's own bundled simple_html_dom parser (via $g_postie->load_html())
  * rather than adding a second vendored dependency or requiring ext-dom -
@@ -68,9 +73,11 @@ class HtmlToBlocks
             return $html;
         }
 
+        $rootAlign = $this->detectAlign($root);
+
         $blocks = [];
         foreach ($this->childNodes($root) as $node) {
-            $blocks = array_merge($blocks, $this->nodeToBlocks($node, $registry));
+            $blocks = array_merge($blocks, $this->nodeToBlocks($node, $registry, $rootAlign));
         }
 
         if (empty($blocks)) {
@@ -85,9 +92,12 @@ class HtmlToBlocks
     }
 
     /**
+     * @param ?string $inheritedAlign left/center/right an ancestor container
+     *        (a <div>/<center>, a <blockquote>) declared, to fall back to
+     *        when $node sets no alignment of its own.
      * @return array<int,array<string,mixed>>
      */
-    private function nodeToBlocks($node, AttachmentRegistry $registry): array
+    private function nodeToBlocks($node, AttachmentRegistry $registry, ?string $inheritedAlign = null): array
     {
         if (!isset($node->nodetype)) {
             return [];
@@ -98,7 +108,7 @@ class HtmlToBlocks
             if ($text === '' || $this->isOrphanedTagFragment($text)) {
                 return [];
             }
-            return [$this->paragraphBlock($text)];
+            return [$this->paragraphBlock($text, $inheritedAlign)];
         }
 
         if ($node->nodetype !== HDOM_TYPE_ELEMENT) {
@@ -117,7 +127,8 @@ class HtmlToBlocks
 
         if (preg_match('/^h([1-6])$/', $tag, $m)) {
             $inner = trim((string) $node->innertext);
-            return $inner === '' ? [] : [$this->headingBlock($inner, (int) $m[1], $this->detectAlign($node))];
+            $align = $this->detectAlign($node) ?? $inheritedAlign;
+            return $inner === '' ? [] : [$this->headingBlock($inner, (int) $m[1], $align)];
         }
 
         if ($tag === 'p') {
@@ -127,23 +138,23 @@ class HtmlToBlocks
             // so Parsedown keeps it as inline content of the same <p>) would
             // otherwise get baked into the paragraph block's HTML instead of
             // becoming its own core/image block. Split around any images.
-            return $this->splitParagraphContent($node, $registry, $this->detectAlign($node));
+            return $this->splitParagraphContent($node, $registry, $this->detectAlign($node) ?? $inheritedAlign);
         }
 
         if ($tag === 'img') {
-            $block = $this->imageBlock($node, null, $registry);
+            $block = $this->imageBlock($node, null, $registry, $inheritedAlign);
             return $block ? [$block] : [];
         }
 
         if ($tag === 'a') {
             $img = $this->soleImageDescendant($node);
             if ($img !== null) {
-                $block = $this->imageBlock($img, $node, $registry, $this->detectAlign($node));
+                $block = $this->imageBlock($img, $node, $registry, $this->detectAlign($node) ?? $inheritedAlign);
                 return $block ? [$block] : [];
             }
 
             $outer = trim((string) $node->outertext);
-            return $this->hasVisibleText($outer) ? [$this->paragraphBlock($outer)] : [];
+            return $this->hasVisibleText($outer) ? [$this->paragraphBlock($outer, $inheritedAlign)] : [];
         }
 
         // A bare <span> wrapping nothing but an image - e.g. Word's own
@@ -154,18 +165,18 @@ class HtmlToBlocks
         if ($tag === 'span') {
             $img = $this->soleImageDescendant($node);
             if ($img !== null) {
-                $block = $this->imageBlock($img, null, $registry, $this->detectAlign($node));
+                $block = $this->imageBlock($img, null, $registry, $this->detectAlign($node) ?? $inheritedAlign);
                 return $block ? [$block] : [];
             }
         }
 
         if ($tag === 'ul' || $tag === 'ol') {
-            $block = $this->listBlock($node, $tag === 'ol');
+            $block = $this->listBlock($node, $tag === 'ol', $this->detectAlign($node) ?? $inheritedAlign);
             return $block ? [$block] : [];
         }
 
         if ($tag === 'blockquote') {
-            $block = $this->quoteBlock($node, $registry);
+            $block = $this->quoteBlock($node, $registry, $this->detectAlign($node) ?? $inheritedAlign);
             return $block ? [$block] : [];
         }
 
@@ -182,10 +193,25 @@ class HtmlToBlocks
         // malformed mail-client HTML (see isOrphanedTagFragment()) counted
         // as "real text", which made the whole div bail out to one giant
         // core/html block instead of converting at all.
-        if ($tag === 'div') {
+        //
+        // <center> is the legacy centering wrapper - same "transparent
+        // container" treatment, always implying center alignment for
+        // everything inside it. Either kind of container can carry an
+        // alignment (a "text-align:" style or "align" attribute on the div,
+        // or <center> itself) that a mail client - Outlook/OWA especially -
+        // put on the container instead of on each line; that has to flow
+        // down to the paragraphs/headings/images produced from the
+        // container's descendants, since detectAlign() only ever inspects a
+        // single element. A descendant that sets its own alignment still
+        // wins (see the "?? $inheritedAlign" fallbacks throughout).
+        if ($tag === 'div' || $tag === 'center') {
+            $childAlign = $tag === 'center'
+                ? 'center'
+                : ($this->detectAlign($node) ?? $inheritedAlign);
+
             $blocks = [];
             foreach ($this->childNodes($node) as $child) {
-                $blocks = array_merge($blocks, $this->nodeToBlocks($child, $registry));
+                $blocks = array_merge($blocks, $this->nodeToBlocks($child, $registry, $childAlign));
             }
             return $blocks;
         }
@@ -208,18 +234,21 @@ class HtmlToBlocks
      *
      * @return array<string,mixed>|null
      */
-    private function quoteBlock($node, AttachmentRegistry $registry): ?array
+    private function quoteBlock($node, AttachmentRegistry $registry, ?string $align = null): ?array
     {
+        $align = $align ?? $this->detectAlign($node);
+
         $innerBlocks = [];
         foreach ($this->childNodes($node) as $child) {
-            $innerBlocks = array_merge($innerBlocks, $this->nodeToBlocks($child, $registry));
+            $innerBlocks = array_merge($innerBlocks, $this->nodeToBlocks($child, $registry, $align));
         }
 
         if (empty($innerBlocks)) {
             return null;
         }
 
-        $openTag      = '<blockquote class="wp-block-quote">';
+        $quoteClass   = 'wp-block-quote' . ($align !== null ? ' has-text-align-' . $align : '');
+        $openTag      = '<blockquote class="' . $quoteClass . '">';
         $innerContent = [$openTag];
         foreach ($innerBlocks as $ignored) {
             $innerContent[] = null;
@@ -228,7 +257,7 @@ class HtmlToBlocks
 
         return [
             'blockName'    => 'core/quote',
-            'attrs'        => [],
+            'attrs'        => $this->textAlignAttrs($align),
             'innerBlocks'  => $innerBlocks,
             'innerHTML'    => $openTag . '</blockquote>',
             'innerContent' => $innerContent,
@@ -244,8 +273,10 @@ class HtmlToBlocks
      *
      * @return array<string,mixed>|null
      */
-    private function listBlock($node, bool $ordered): ?array
+    private function listBlock($node, bool $ordered, ?string $align = null): ?array
     {
+        $align = $align ?? $this->detectAlign($node);
+
         $items = [];
         foreach ($this->childNodes($node) as $child) {
             if (!isset($child->nodetype) || $child->nodetype !== HDOM_TYPE_ELEMENT
@@ -264,6 +295,7 @@ class HtmlToBlocks
 
         $tagName = $ordered ? 'ol' : 'ul';
         $attrs   = $ordered ? ['ordered' => true] : [];
+        $attrs   = array_merge($attrs, $this->textAlignAttrs($align));
 
         // Preserve a non-default start number Parsedown emits for e.g. a
         // Markdown list that begins "3. item".
@@ -272,7 +304,8 @@ class HtmlToBlocks
             $attrs['start'] = $start;
         }
 
-        $openTag = '<' . $tagName . ' class="wp-block-list"'
+        $listClass = 'wp-block-list' . ($align !== null ? ' has-text-align-' . $align : '');
+        $openTag = '<' . $tagName . ' class="' . $listClass . '"'
             . (isset($attrs['start']) ? ' start="' . $attrs['start'] . '"' : '')
             . '>';
 
@@ -410,7 +443,7 @@ class HtmlToBlocks
                 }
                 $buffer = '';
 
-                $blocks = array_merge($blocks, $this->nodeToBlocks($child, $registry));
+                $blocks = array_merge($blocks, $this->nodeToBlocks($child, $registry, $align));
                 continue;
             }
 
@@ -489,7 +522,7 @@ class HtmlToBlocks
     private function isBlockLevelTag(string $tag): bool
     {
         return (bool) preg_match('/^h[1-6]$/', $tag)
-            || in_array($tag, ['p', 'div', 'ul', 'ol', 'blockquote', 'hr'], true);
+            || in_array($tag, ['p', 'div', 'center', 'ul', 'ol', 'blockquote', 'hr'], true);
     }
 
     /**
