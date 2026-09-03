@@ -62,6 +62,8 @@ class HtmlToBlocks
             return $html;
         }
 
+        $html = $this->flattenNestedAnchors($html);
+
         $dom = $g_postie->load_html($html);
         if (!$dom) {
             return $html;
@@ -89,6 +91,37 @@ class HtmlToBlocks
         }
 
         return serialize_blocks($blocks);
+    }
+
+    /**
+     * Collapses an anchor nested directly inside another anchor down to
+     * just the inner one, before the DOM is even parsed - so every
+     * downstream branch (paragraph buffer, htmlFallbackBlock, list item,
+     * quote) is spared it. Nested <a> is invalid HTML that Gutenberg's
+     * block validator rejects outright ("this block contains unexpected or
+     * invalid content"), and it turns up routinely when content that
+     * already held a hyperlink - a mailto in a Word doc, say - is put
+     * through a mail client that then auto-links the visible URL/address
+     * text a second time: Thunderbird's moz-txt-link-abbreviated /
+     * moz-txt-link-freetext wrappers, or Gmail doing the same, produce
+     * <a ...><a href="...">text</a></a>. The inner anchor carries the real
+     * href and link text, so it's the outer wrapper that's dropped.
+     * Looped until stable in case of more than one nesting level.
+     */
+    private function flattenNestedAnchors(string $html): string
+    {
+        $pattern = '/<a\b[^>]*>\s*(<a\b[^>]*>.*?<\/a>)\s*<\/a>/is';
+        do {
+            $result = preg_replace($pattern, '$1', $html, -1, $count);
+            if (!is_string($result)) {
+                // preg_replace failed (e.g. backtracking limit) - never
+                // return a truncated/empty string, keep the last good HTML.
+                break;
+            }
+            $html = $result;
+        } while ($count > 0);
+
+        return $html;
     }
 
     /**
