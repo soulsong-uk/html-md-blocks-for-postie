@@ -32,12 +32,12 @@ class Strings
     private static function all(): array
     {
         return [
-            // Bootstrap (soulsong-blocks-for-postie.php) - missing-dependency admin notice
-            'requires_postie_notice' => __('Soulsong HTML and MD Blocks for Postie requires the Postie plugin to be installed and active - it has no effect on its own.', 'html-md-blocks-for-postie'),
+            // Bootstrap (slnwp-blocks-for-postie.php) - missing-dependency admin notice
+            'requires_postie_notice' => __('SLNWP Html and MD Blocks for Postie requires the Postie plugin to be installed and active - it has no effect on its own.', 'html-md-blocks-for-postie'),
 
             // Settings page (src/Settings.php) - menu + page heading
             'menu_title'   => __('HTML & Markdown Blocks', 'html-md-blocks-for-postie'),
-            'page_heading' => __('Soulsong HTML and MD Blocks for Postie', 'html-md-blocks-for-postie'),
+            'page_heading' => __('SLNWP Html and MD Blocks for Postie', 'html-md-blocks-for-postie'),
 
             // Settings page - Content Conversion subsection
             'content_conversion_heading'    => __('Content Conversion', 'html-md-blocks-for-postie'),
